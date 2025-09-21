@@ -1,0 +1,12 @@
+
+# Set your project, or the command will use the one from your gcloud config
+export GCLOUD_PROJECT="vector-search-poc" 
+export DATASET_ID="finops_agent_logs"
+export TABLE_ID="vm_deletion_log"
+export LOCATION="us-central1" # Or your preferred location
+
+# Create the dataset if it doesn't exist
+bq show --project_id=$GCLOUD_PROJECT $DATASET_ID &>/dev/null || bq mk --dataset --project_id=$GCLOUD_PROJECT --location=$LOCATION $DATASET_ID
+
+# Create the table with a single string column
+bq mk --table --description "Logs for VM deletion events" --expiration 0 ${GCLOUD_PROJECT}:${DATASET_ID}.${TABLE_ID} log_entry:STRING
