@@ -1,3 +1,6 @@
+import nest_asyncio
+nest_asyncio.apply()
+
 # =======================================================================================
 # ### --- START: COMPLETE AGENT FILE (DEFINITIVE SIMPLIFIED SOLUTION) --- ###
 # =======================================================================================
@@ -186,7 +189,108 @@ def log_vm_deletion_to_bigquery(project_id: str, instance_id: str, zone: str, us
         logging.error(f"BigQuery insert failed for VM '{instance_id}': {e}", exc_info=True)
         return f"An error occurred during BigQuery insert: {e}"
 
-# In app/agent.py, replace the existing function with this one:
+client = vertexai.Client(project=config.GOOGLE_PROJECT_ID, location="us-central1")
+
+client = vertexai.Client(project=config.GOOGLE_PROJECT_ID, location="us-central1")
+
+async def call_rag_agent_rest(user_query: str) -> str:
+    """
+    Calls the RAG agent using the Vertex AI SDK.
+    """
+    if not config.REMOTE_RAG_AGENT_RESOURCE_NAME:
+        return "Error: REMOTE_RAG_AGENT_RESOURCE_NAME is not set in the environment."
+
+    try:
+        query = f""" Fetch the cloud resource details which was proposed during the design phase for the project/s -> {user_query}. 
+        The response should include the information like name of the cloud service, Type of service (if info available), Size or configuration (CPU/Memory/storage/etc.) 
+        of the service (if available), deployment environment (if available), region/zone/location (if info available)  """
+
+        remote_agent = client.agent_engines.get(name=config.REMOTE_RAG_AGENT_RESOURCE_NAME)
+        stream = remote_agent.async_stream_query(
+            message=query,
+            user_id="local-orchestrator-agent"
+        )
+        response_parts = []
+        async for event in stream:
+            logging.info(f"Received stream event: {event}")
+            if isinstance(event.get("content"), dict):
+                content = event["content"]
+                if isinstance(content.get("parts"), list):
+                    for part in content["parts"]:
+                        if isinstance(part, dict) and "text" in part:
+                            text_chunk = part["text"]
+                            if text_chunk:
+                                logging.info(f"Extracted text chunk: {text_chunk}")
+                                response_parts.append(text_chunk)
+        final_response = "".join(response_parts).strip()
+        if not final_response:
+             logging.info("WARNING: No text parts found in any event from the stream.")
+             return "No text response could be parsed from the remote agent's stream."
+        return final_response
+
+    except Exception as e:
+        logging.error(f"Error in SDK tool 'call_rag_agent_rest': {e}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return f"An unexpected error occurred: {str(e)}"
+
+# =================================================================
+# ### START: REPLACEMENT CODE FOR _get_rag_response_async ###
+# =================================================================
+
+async def _get_rag_response_async(query: str, resource_name: str) -> str:
+    """
+    Asynchronously calls the RAG agent and correctly consumes the streaming response.
+    """
+    logging.info("Executing async stream_query call for RAG agent...")
+    try:
+        remote_agent = client.agent_engines.get(name=resource_name)
+        
+        # The SDK's async_stream_query is an async generator itself.
+        # We can consume it directly to build the final response.
+        response_parts = [
+            chunk.text async for chunk in remote_agent.async_stream_query(
+                message=query,
+                user_id="local-orchestrator-agent"
+            )
+        ]
+        
+        final_response = "".join(response_parts).strip()
+        
+        if not final_response:
+             logging.warning("WARNING: The remote agent's stream produced no text.")
+             return "I was able to connect to the design compliance agent, but it did not return any information for your query."
+        
+        logging.info("Successfully received and concatenated response from remote agent.")
+        return final_response
+        
+    except Exception as e:
+        logging.error(f"Error inside async RAG helper: {e}", exc_info=True)
+        return f"An error occurred while communicating with the design compliance agent: {str(e)}"
+
+# =================================================================
+# ### END: REPLACEMENT CODE ###
+# =================================================================
+
+async def design_compliance_rag_agent(user_query: str) -> str:
+    """
+    Asynchronously calls the remote Agent Engine agent using the new async helper.
+    """
+    if not config.REMOTE_RAG_AGENT_RESOURCE_NAME:
+        return "Error: design_compliance_rag_agent is not set in the environment."
+    try:
+        query = f""" Fetch the cloud resource details which was proposed during the design phase for the project/s -> {user_query}. 
+        The response should include the information like name of the cloud service, Type of service (if info available), Size or configuration (CPU/Memory/storage/etc.) 
+        of the service (if available), deployment environment (if available), region/zone/location (if info available)  """
+        final_response = await _get_rag_response_async(
+            query,
+            config.REMOTE_RAG_AGENT_RESOURCE_NAME
+        )
+        logging.info(f"Remote agent returned final response with cloud resources details for compliance review.")
+        return final_response
+    except Exception as e:
+        logging.error(f"Error in async tool 'design_compliance_rag_agent': {e}", exc_info=True)
+        return f"An unexpected error occurred: {str(e)}"
 
 def generate_chart_from_data(
     chart_type: str,
@@ -195,10 +299,12 @@ def generate_chart_from_data(
     x_column: str,
     y_columns: List[str], # <-- Key change: accepts a LIST of y-columns
     labels_column: Optional[str] = None,
-    values_column: Optional[str] = None
+    values_column: Optional[str] = None,
+    color_column: Optional[str] = None
 ) -> str:
     """
-    Generates a chart from JSON data. Supports single or multiple y-columns for bar and line charts.
+    Generates a chart from JSON data, uploads it to GCS, and returns a public URL.
+    For bar charts, it also returns a text-based representation.
     
     Args:
         chart_type (str): The type of chart ('bar', 'pie', 'line').
@@ -208,35 +314,61 @@ def generate_chart_from_data(
         y_columns (List[str]): A list of column names for the Y-axis.
         labels_column (Optional[str]): The column for pie chart labels.
         values_column (Optional[str]): The column for pie chart values.
+        color_column (Optional[str]): The column to use for coloring lines in a line chart.
     """
-    logging.info(f"Generating '{chart_type}' chart titled '{title}' with y_columns: {y_columns}")
+    logging.info(f"--- [Chart Tool] Generating '{chart_type}' chart titled '{title}' ---")
+    bucket_name = "finoptiagents-generated-graph"
     try:
         data = json.loads(data_json_string)
         if not data:
             return json.dumps({"error": "Input data is empty."})
         
         df = pd.DataFrame(data)
-        fig = None
+        for col in y_columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
+        fig = None
+        text_chart = ""
         if chart_type.lower() == 'bar':
-            # Melts the dataframe to plot multiple y-columns in a grouped bar chart
             df_melted = df.melt(id_vars=[x_column], value_vars=y_columns, var_name='Category', value_name='Value')
-            fig = px.bar(df_melted, x=x_column, y='Value', color='Category', title=title, barmode='group')
-        
+            fig = px.bar(df_melted, x=x_column, y='Value', color='Category', title=title, barmode='group', template="plotly_white")
+
+            # Generate text-based bar chart
+            text_chart += f"{title}:\n"
+            max_val = df_melted['Value'].max()
+            max_width = 50
+            for index, row in df_melted.iterrows():
+                bar_width = int((row['Value'] / max_val) * max_width)
+                text_chart += f"{row[x_column]:<15} | {'█' * bar_width} {row['Value']:.2f}\n"
+
         elif chart_type.lower() == 'pie':
-            fig = px.pie(df, names=labels_column, values=values_column, title=title)
-        
+            fig = px.pie(df, names=labels_column, values=values_column, title=title, template="plotly_white")
         elif chart_type.lower() == 'line':
-            df_melted = df.melt(id_vars=[x_column], value_vars=y_columns, var_name='Metric', value_name='Value')
-            fig = px.line(df_melted, x=x_column, y='Value', color='Metric', title=title)
-            
+            fig = px.line(df, x=x_column, y=y_columns[0], color=color_column, title=title, template="plotly_white")
         else:
             return json.dumps({"error": f"Unsupported chart type: '{chart_type}'."})
 
-        return fig.to_json()
+        # Save chart to a temporary local file
+        chart_filename = f"{title.replace(' ', '_')}_{int(time.time())}.html"
+        local_chart_path = f"/tmp/{chart_filename}"
+        fig.write_html(local_chart_path)
+
+        # Upload to GCS
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(chart_filename)
+        blob.upload_from_filename(local_chart_path)
+
+        logging.info(f"--- [Chart Tool] Successfully uploaded chart to GCS: {blob.public_url} ---")
         
+        response = f"Chart has been generated and is available at: {blob.public_url}"
+        if text_chart:
+            response = f"{text_chart}\n{response}"
+        
+        return response
+
     except Exception as e:
-        logging.error(f"Chart generation failed: {e}", exc_info=True)
+        logging.error(f"Chart generation or GCS upload failed: {e}", exc_info=True)
         return json.dumps({"error": f"An unexpected error occurred: {e}"})
 
 # --- REVERTED: run_bq_query is back to being safely READ-ONLY ---
@@ -273,10 +405,6 @@ def run_bq_query(query: str) -> str:
     logging/monitoring). Also highlight the resources where utlization is less than 50%.
     Readiness Check for Lower Environments: Cross-check Release Train Tickets and ServiceNow CR/Defects to confirm upcoming releases or open CRs. 
     If there are no planned release then there is no point to have lower environment. Mark such lower-env resources as optimization candidates.
-
-    
-
-
     """
     logging.info(f"Executing read-only BigQuery query.")
     logging.debug(f"BQ Query: {query}")
@@ -294,58 +422,6 @@ def run_bq_query(query: str) -> str:
     except Exception as e:
         logging.error(f"BigQuery query execution failed: {e}", exc_info=True)
         return json.dumps({"error": f"An error occurred while running the query: {str(e)}"})
-
-# 4. --- SIMPLIFIED RAG TOOLS (No Logging) ---
-
-def create_corpus(display_name: str) -> str:
-    """Creates a new, empty corpus (knowledge base) with a given display name."""
-    try:
-        logging.info(f"Creating corpus with display name: '{display_name}'")
-        corpus = genai.retriever.create_corpus(display_name=display_name)
-        return json.dumps({"status": "success", "corpus_name": corpus.name, "display_name": corpus.display_name})
-    except Exception as e:
-        logging.error(f"Failed to create corpus '{display_name}': {e}", exc_info=True)
-        return json.dumps({"status": "error", "message": str(e)})
-
-def list_corpora() -> str:
-    """Lists available corpora."""
-    try:
-        logging.info("Listing all available corpora.")
-        corpora = [{"corpus_name": c.name, "display_name": c.display_name} for c in genai.retriever.list_corpora()]
-        return json.dumps(corpora)
-    except Exception as e:
-        logging.error(f"Failed to list corpora: {e}", exc_info=True)
-        return json.dumps({"status": "error", "message": str(e)})
-
-def ingest_document_list(corpus_name: str, gcs_uris: List[str]) -> str:
-    """Takes a list of GCS URIs and ingests them into the specified corpus."""
-    try:
-        logging.info(f"Ingesting {len(gcs_uris)} documents into corpus '{corpus_name}'.")
-        corpus = genai.retriever.get_corpus(name=corpus_name)
-        success, fail = 0, 0
-        for uri in gcs_uris:
-            try:
-                corpus.create_file(uri=uri)
-                success += 1
-                logging.info(f"Successfully initiated ingestion for '{uri}'.")
-            except Exception as doc_e:
-                fail += 1
-                logging.error(f"Failed to ingest document '{uri}' into '{corpus_name}': {doc_e}", exc_info=True)
-        return json.dumps({"status": "success", "message": f"Ingestion complete. Succeeded: {success}, Failed: {fail}."})
-    except Exception as e:
-        logging.error(f"Failed to get corpus '{corpus_name}' for ingestion: {e}", exc_info=True)
-        return json.dumps({"status": "error", "message": str(e)})
-
-def rag_query(corpus_name: str, query: str) -> str:
-    """Performs a RAG query on a corpus."""
-    try:
-        logging.info(f"Performing RAG query on corpus '{corpus_name}': '{query}'")
-        result = genai.retriever.search(corpus=corpus_name, query=query)
-        chunks = [{"source": c.file.display_name or c.file.uri, "content": c.text} for c in result.chunks]
-        return json.dumps(chunks)
-    except Exception as e:
-        logging.error(f"RAG query failed on corpus '{corpus_name}': {e}", exc_info=True)
-        return json.dumps({"status": "error", "message": str(e)})
 
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
@@ -394,6 +470,8 @@ def simple_before_model_modifier(
     else:
         logging.info(f"Proceeding with LLM call for agent '{agent_name}'.")
         return None
+
+
     
 #*************************END: Call Back *****************************************
 
@@ -402,7 +480,8 @@ delete_vm_instance_agent = LlmAgent(
     name="delete_vm_instance_agent",
     model="gemini-2.0-flash",
     description="A careful agent that verifies a VM exists and then calls a single tool to delete and log the action.",
-    instruction="""You are a careful, two-step agent for deleting a VM. 1. VERIFY: Call `list_vm_instances` to confirm the VM exists. 2. EXECUTE: If the VM is in the list, call `delete_vm_instance`.""",
+    instruction="""You are a careful, two-step agent for deleting a VM. 1. VERIFY: Call `list_vm_instances` to confirm the VM exists. 
+    2. EXECUTE: If the VM is in the list, call `delete_vm_instance`.""",
     tools=[list_vm_instances, delete_vm_instance],
 )
 
@@ -419,6 +498,7 @@ Then, provide a clear, bulleted list of what you can help with. The capabilities
 - **Data Visualization**: Create charts and graphs from your cloud data.
 - **WIP-Implementation Review**: Compare deployed resources against design documents for compliance.
 - **Analyze VM Deletion History**: Provide insights into past VM deletion events.
+- **Audit the design documents**: Query the design documents indexed at Google RAG Engine for the details of the cloud resources proposed to be used in the project.  
 
 End the message with a friendly closing, like "How can I help you today?"
 Do not use any tools. Just generate the greeting text.
@@ -441,125 +521,15 @@ def debug_after_model(callback_context, llm_response):
     logging.debug(llm_response)
     logging.debug("="*50)
 
-    # The line that caused the error has been removed.
-
-earb_compliance_agent = Agent(
-    name="earb_compliance_agent",
-    # Using Gemini 2.5 Flash for best performance with RAG operations
-    model="gemini-2.0-flash",
-    description="Vertex AI RAG Agent",
-    after_model_callback=debug_after_model,
-    tools=[
-        rag_query,
-        list_corpora,
-        create_corpus,
-        add_data,
-        get_corpus_info,
-        delete_corpus,
-        delete_document,
-    ],
-    instruction="""
-    # 🧠 Vertex AI RAG Agent
-
-    You are a helpful RAG (Retrieval Augmented Generation) agent that can interact with Vertex AI's document corpora.
-    You can retrieve information from corpora, list available corpora, create new corpora, add new documents to corpora, 
-    get detailed information about specific corpora, delete specific documents from corpora, 
-    and delete entire corpora when they're no longer needed.
-    
-    ## Your Capabilities
-    
-    1. **Query Documents**: You can answer questions by retrieving relevant information from document corpora.
-    2. **List Corpora**: You can list all available document corpora to help users understand what data is available.
-    3. **Create Corpus**: You can create the primary 'finops_design_documents_corpus' and it will automatically be filled with the necessary documents. This action does not require a name.
-    4. **Add New Data**: You can add new documents (Google Drive URLs, etc.) to existing corpora.
-    5. **Get Corpus Info**: You can provide detailed information about a specific corpus, including file metadata and statistics.
-    6. **Delete Document**: You can delete a specific document from a corpus when it's no longer needed.
-    7. **Delete Corpus**: You can delete an entire corpus and all its associated files when it's no longer needed.
-    
-    ## How to Approach User Requests
-    
-    When a user asks a question:
-    1. First, determine if they want to manage corpora (list/create/add data/get info/delete) or query existing information.
-    2. If they're asking a knowledge question, use the `rag_query` tool to search the corpus.
-    3. `create_corpus`: Creates the standard FinOps design document corpus and ingests data.
-       - Parameters: None
-    4. If they want to create a new corpus, use the `create_corpus` tool.You should create a suitable, 
-    descriptive name like 'finops_design_docs_corpus' for the corpus name.
-    5. If they want to add data, ensure you know which corpus to add to, then use the `add_data` tool.
-    6. If they want information about a specific corpus, use the `get_corpus_info` tool.
-    7. If they want to delete a specific document, use the `delete_document` tool with confirmation.
-    8. If they want to delete an entire corpus, use the `delete_corpus` tool with confirmation.
-    
-    ## Using Tools
-    
-    You have seven specialized tools at your disposal:
-    
-    1. `rag_query`: Query a corpus to answer questions
-       - Parameters:
-         - corpus_name: The name of the corpus to query (required, but can be empty to use current corpus)
-         - query: The text question to ask
-    
-    2. `list_corpora`: List all available corpora
-       - When this tool is called, it returns the full resource names that should be used with other tools
-    
-    3. `create_corpus`: Create a new corpus
-       - Parameters:
-         - corpus_name: The name for the new corpus
-    
-    4. `add_data`: Add new data to a corpus
-       - Parameters:
-         - corpus_name: The name of the corpus to add data to (required, but can be empty to use current corpus)
-         - paths: List of Google Drive or GCS URLs
-    
-    5. `get_corpus_info`: Get detailed information about a specific corpus
-       - Parameters:
-         - corpus_name: The name of the corpus to get information about
-         
-    6. `delete_document`: Delete a specific document from a corpus
-       - Parameters:
-         - corpus_name: The name of the corpus containing the document
-         - document_id: The ID of the document to delete (can be obtained from get_corpus_info results)
-         - confirm: Boolean flag that must be set to True to confirm deletion
-         
-    7. `delete_corpus`: Delete an entire corpus and all its associated files
-       - Parameters:
-         - corpus_name: The name of the corpus to delete
-         - confirm: Boolean flag that must be set to True to confirm deletion
-    
-    ## INTERNAL: Technical Implementation Details
-    
-    This section is NOT user-facing information - don't repeat these details to users:
-    
-    - The system tracks a "current corpus" in the state. When a corpus is created or used, it becomes the current corpus.
-    - For rag_query and add_data, you can provide an empty string for corpus_name to use the current corpus.
-    - If no current corpus is set and an empty corpus_name is provided, the tools will prompt the user to specify one.
-    - Whenever possible, use the full resource name returned by the list_corpora tool when calling other tools.
-    - Using the full resource name instead of just the display name will ensure more reliable operation.
-    - Do not tell users to use full resource names in your responses - just use them internally in your tool calls.
-    
-    ## Communication Guidelines
-    
-    - Be clear and concise in your responses.
-    - If querying a corpus, explain which corpus you're using to answer the question.
-    - If managing corpora, explain what actions you've taken.
-    - When new data is added, confirm what was added and to which corpus.
-    - When corpus information is displayed, organize it clearly for the user.
-    - When deleting a document or corpus, always ask for confirmation before proceeding.
-    - If an error occurs, explain what went wrong and suggest next steps.
-    - When listing corpora, just provide the display names and basic information - don't tell users about resource names.
-    
-    Remember, your primary goal is to help users access and manage information through RAG capabilities.
-    """,
-)
-
-# --- Final, Simplified Root Agent ---
 # --- Final, Simplified Root Agent ---
 root_agent = LlmAgent(
     name="finops_optimization_agent",
     model="gemini-2.0-flash",
     description="A comprehensive FinOps agent that delegates tasks to specialist sub-agents.",
     instruction=(
-        """You are a comprehensive Google Cloud FinOps assistant named FinOpti. Your primary objective is to analyze cloud cost and utilization data, manage VM resources safely, and present findings clearly to the user.
+        """You are a comprehensive Google Cloud FinOps assistant named FinOpti. Your primary objective is to analyze cloud cost and utilization data, 
+        manage VM resources safely, and present findings clearly to the user.
+        For any response where there can be a list of items, or subitems, use numbered and unnumbered list (sub items must be indented) for ethestics.  
 
     ## Core Capabilities & CRITICAL WORKFLOWS
 
@@ -580,15 +550,16 @@ root_agent = LlmAgent(
     **CRITICAL WORKFLOW: DATA VISUALIZATION**
     When a user asks you to generate a graph or chart, you MUST follow this two-step process:
     1.  **GET DATA:** Use the `run_bq_query` tool to execute the correct SQL query to get the data for the chart.
-    2.  **GENERATE CHART:** Use the `generate_chart_from_data` tool with the data from the previous step.
+    2.  **GENERATE CHART:** Use the `generate_chart_from_data` tool with the data from the previous step. This tool will save the chart to Google Cloud Storage and return a public URL. For bar charts, it will also return a text-based representation.
 
     **CRITICAL WORKFLOW: GENERATING GRAPHS (MUST FOLLOW)**
     When a user asks for a graph, you MUST follow this two-step process:
     1.  **GET DATA:** Use `run_bq_query` to get data from `project_health_summary_v`.
-        - Example Query: `SELECT project_name, total_monthly_cost FROM \`vector-search-poc.finoptiagents.project_health_summary_v\`;`
+        - Example Query for Bar Chart: `SELECT project_name, total_monthly_cost FROM \`vector-search-poc.finoptiagents.project_health_summary_v\`;`
+        - Example Query for Line Chart: `SELECT month, project_name, total_cost FROM \`vector-search-poc.finoptiagents.finops_cost_usage\`;`
     2.  **GENERATE CHART:** Use `generate_chart_from_data`.
         - The `y_columns` parameter **MUST be a list of strings**, even if there is only one column.
-        - **Example Call:**
+        - **Example Call for Bar Chart:**
           `generate_chart_from_data(`
             `chart_type='bar',`
             `data_json_string='[...data...]',`
@@ -596,14 +567,26 @@ root_agent = LlmAgent(
             `x_column='project_name',`
             `y_columns=['total_monthly_cost']`
           `)`
+        - **Example Call for Line Chart:**
+          `generate_chart_from_data(`
+            `chart_type='line',`
+            `data_json_string='[...data...]',`
+            `title='Monthly Cloud Spend Trend by Project',`
+            `x_column='month',`
+            `y_columns=['total_cost'],`
+            `color_column='project_name'`
+          `)`
+
 
     **CRITICAL OUTPUT RULE FOR CHARTS:**
-    After `generate_chart_from_data` returns its JSON, your final response **MUST BE ONLY THAT JSON STRING.** Do not add any conversational text.
+    After `generate_chart_from_data` returns its output, your final response **MUST BE a message to the user with the text-based chart (if available) and the URL.** For example: "I have generated the chart for you. Here is a preview:\n[text-based chart]\n\nYou can view the full interactive chart here: [URL]".
 
     **--- CAPABILITY 4: Implementation Review (Dynamic RAG) ---**
-    - To **check if resources were implemented correctly** according to design documents, you MUST delegate the entire task to the `dynamic_rag_agent`. This agent will manage its own knowledge base to answer the question.
-    - *Example User Prompt:* "Can you check if the VMs for the 'customer-billing-api' were deployed correctly?"
-    - *Your Correct Action:* Delegate to `dynamic_rag_agent`.
+    - To **check if resources were implemented correctly** according to design documents, you MUST delegate the entire task to the `design_compliance_rag_agent`. 
+    This agent will manage its own knowledge base to answer the question.
+    - *Example User Prompt:* Question 1. "Can you check if the <project name> had plans to deploy specific resource <resource name> during the design phase ?"
+                             Question 2. "What was the estimated cost for the cloud services proposed during the design phase?"   
+    - *Your Correct Action:* Delegate to `design_compliance_rag_agent`.
 
     **--- CAPABILITY 5: Optimization Proposals (using ServiceNow) ---**
     - Propose changes using the `create_servicenow_cr` tool (if available).
@@ -633,18 +616,17 @@ root_agent = LlmAgent(
     # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
     tools=[
         list_vm_instances,
-        search_tool,
+        #search_tool,
         call_cpu_utilization_agent,
         run_bq_query,
         generate_chart_from_data,
+        design_compliance_rag_agent, # <-- ADDED HERE
         # earb_compliance_agent, # <-- REMOVED FROM HERE
     ],
     sub_agents=[
         delete_vm_instance_agent,
-        greeting_agent,
-        #earb_compliance_agent, # <-- ADDED HERE
+        greeting_agent, # <-- ADDED HERE
     ],
     before_model_callback=simple_before_model_modifier,
 )
 
-logging.info("RAG Workflow (Simplified) has been defined and integrated.")

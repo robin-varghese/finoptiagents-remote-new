@@ -94,6 +94,7 @@ GOOGLE_API_KEY = _fetch_config("google-api-key")
 # Use GOOGLE_ZONE secret, fall back to GOOGLE_CLOUD_LOCATION env var
 GOOGLE_ZONE = _fetch_config("google-zone") or os.environ.get("GOOGLE_CLOUD_LOCATION")
 REMOTE_CPU_AGENT_RESOURCE_NAME = _fetch_config("remote-cpu-agent-resource-name")
+REMOTE_RAG_AGENT_RESOURCE_NAME = _fetch_config("remote-rag-agent-resource-name")
 EARB_DESIGNDOCS = _fetch_config("earb-designdocs")  # e.g., "gs://my-finops-design-docs-bucket"
 
 # --- ADDED FOR BACKWARDS COMPATIBILITY ---

@@ -138,7 +138,7 @@ def main():
         
         app_name = ""
         while not app_name:
-            app_name_input = input("Please enter a project/application name to use as a tag (e.g., 'customer-portal'): ")
+            app_name_input = input("Please enter a project/application name to use as a tag (e.g., 'finoptiagents'): ")
             if app_name_input.strip():
                 app_name = sanitize_for_label(app_name_input)
             else:

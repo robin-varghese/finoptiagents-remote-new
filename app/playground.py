@@ -44,6 +44,31 @@ load_dotenv()
 # Import agents
 from app.agent import root_agent, greeting_agent
 
+# --- Sample Prompts ---
+sample_prompts = {
+    "FinOps Analyst": [
+        "Show me the top 5 most expensive projects this month.",
+        "What is the cost trend for the 'customer-billing-api' project over the last 3 months?",
+        "Generate a bar chart of cloud spend by project for the last month.",
+        "Which projects are over budget?",
+        "Give me a list of all untagged VM instances.",
+    ],
+    "Engineering Lead": [
+        "What is the current CPU utilization for all VMs in the 'proj-alpha-001' project in the 'us-central1-a' zone?",
+        "Are there any VMs in the 'proj-beta-002' project that have been running for more than 30 days with less than 5% average CPU utilization?",
+        "Show me the cost breakdown by service for the 'proj-gamma-003' project.",
+        "Which resources in my projects are not compliant with our design documents?",
+        "Delete the VM instance 'test-vm-to-delete' in project 'proj-delta-004' and zone 'us-central1-a'.",
+    ],
+    "Product Owner": [
+        "What is the total cost of ownership for the 'customer-billing-api' product so far?",
+        "Generate a line chart showing the month-on-month cost trend for the 'customer-billing-api' product.",
+        "What is the forecasted cost for the 'customer-billing-api' product for the next quarter?",
+        "Which projects are associated with the 'customer-billing-api' product?",
+        "Give me a summary of the cloud spend for all my products.",
+    ],
+}
+
 def get_or_create_eventloop():
     """Gets the running event loop or creates a new one."""
     try:
@@ -57,6 +82,16 @@ def get_or_create_eventloop():
 st.set_page_config(page_title="FinOps Agent Playground", page_icon="🤖", layout="wide")
 st.title("🤖 FinOps Agent Playground")
 st.write("Interact with your agent locally. The agent has access to the tools you've defined.")
+
+# --- Sidebar with Sample Prompts ---
+with st.sidebar:
+    st.title("Sample Prompts")
+    st.write("Click a prompt to use it.")
+    for persona, prompts in sample_prompts.items():
+        with st.expander(persona):
+            for prompt_text in prompts:
+                if st.button(prompt_text):
+                    st.session_state.prompt_from_sidebar = prompt_text
 
 # --- Session Management & Automatic Greeting ---
 if "messages" not in st.session_state:
@@ -120,7 +155,12 @@ for message in st.session_state.messages:
             st.markdown(str(message["content"]))
 
 # --- User Input and Agent Interaction ---
-if prompt := st.chat_input("What would you like to do?"):
+prompt = st.chat_input("What would you like to do?")
+if "prompt_from_sidebar" in st.session_state and st.session_state.prompt_from_sidebar:
+    prompt = st.session_state.prompt_from_sidebar
+    st.session_state.prompt_from_sidebar = None
+
+if prompt:
     logging.info(f"User input received: '{prompt}'")
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
