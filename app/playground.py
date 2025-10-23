@@ -46,26 +46,32 @@ from app.agent import root_agent, greeting_agent
 
 # --- Sample Prompts ---
 sample_prompts = {
-    "FinOps Analyst": [
-        "Show me the top 5 most expensive projects this month.",
-        "What is the cost trend for the 'customer-billing-api' project over the last 3 months?",
-        "Generate a bar chart of cloud spend by project for the last month.",
-        "Which projects are over budget?",
-        "Give me a list of all untagged VM instances.",
+    "FinOps Analyst / Cloud Financial Manager": [
+        "What Data Analysis & Reporting can you do",
+        "As part of the Budgeted & actual cost spent analysis, can you identify which are the good projects and which are the bad projects",
+        "as part of Non-Compliance Analysis can you list out all projects in the category and the reasons and actions needed",
+        "can you run utlization analysis and identify which are the projects spending more in production than lower environment",
+        "can you run optimisation analysis and suggest which project has optimisation chances and why so",
+        "can you suggest which cloud resources are good candidates for cost optimization",
+        "tell me which project in our organization is using these resources and the resource utlization is less than 50%",
+        "which are the projects having lower environments but doesn\'t have any tickets for release (change request or defects)",
+        "can you generate a graph to send to my manager to show the cloud spend for every project",
     ],
-    "Engineering Lead": [
-        "What is the current CPU utilization for all VMs in the 'proj-alpha-001' project in the 'us-central1-a' zone?",
-        "Are there any VMs in the 'proj-beta-002' project that have been running for more than 30 days with less than 5% average CPU utilization?",
-        "Show me the cost breakdown by service for the 'proj-gamma-003' project.",
-        "Which resources in my projects are not compliant with our design documents?",
-        "Delete the VM instance 'test-vm-to-delete' in project 'proj-delta-004' and zone 'us-central1-a'.",
+    "Engineering Manager / Team Lead": [
+        "who are the stakeholders of these projects",
+        "who are managing the good projects in-terms of compliance.",
+        "can you list all the GCP projects running in the project vector-search-poc in zone us-centrall-a",
+        "can you check the CPU utilisation for this virtual machine",
+        "can you delete the under utilised CPU from cloud. project name : vector-search-poc zone:us-centrall-a",
     ],
-    "Product Owner": [
-        "What is the total cost of ownership for the 'customer-billing-api' product so far?",
-        "Generate a line chart showing the month-on-month cost trend for the 'customer-billing-api' product.",
-        "What is the forecasted cost for the 'customer-billing-api' product for the next quarter?",
-        "Which projects are associated with the 'customer-billing-api' product?",
-        "Give me a summary of the cloud spend for all my products.",
+    "Compliance / Audit Team": [
+        "so how many vms were deleted today",
+        "can you do the query and tell me how many virtual machines were deleted yesterday",
+        "who deleted the last VM",
+        "how many vms were deleted by Robin",
+        "can you check whether Robin has deleted any VMs",
+        "can you check whether Robin Varghese has deleted any VMs",
+        "when did Robin Varghese delete the VMs",
     ],
 }
 
@@ -83,6 +89,10 @@ st.set_page_config(page_title="FinOps Agent Playground", page_icon="🤖", layou
 st.title("🤖 FinOps Agent Playground")
 st.write("Interact with your agent locally. The agent has access to the tools you've defined.")
 
+# --- Clicked Prompts Initialization ---
+if "clicked_prompts" not in st.session_state:
+    st.session_state.clicked_prompts = set()
+
 # --- Sidebar with Sample Prompts ---
 with st.sidebar:
     st.title("Sample Prompts")
@@ -90,8 +100,13 @@ with st.sidebar:
     for persona, prompts in sample_prompts.items():
         with st.expander(persona):
             for prompt_text in prompts:
-                if st.button(prompt_text):
+                if prompt_text in st.session_state.clicked_prompts:
+                    label = f"✅ {prompt_text}"
+                else:
+                    label = prompt_text
+                if st.button(label):
                     st.session_state.prompt_from_sidebar = prompt_text
+                    st.session_state.clicked_prompts.add(prompt_text)
 
 # --- Session Management & Automatic Greeting ---
 if "messages" not in st.session_state:

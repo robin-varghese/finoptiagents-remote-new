@@ -113,55 +113,28 @@ def search_tool(query: str):
         logging.error(f"Search tool request failed for query '{query}': {e}", exc_info=True)
         return {"error": str(e)}
 
-def _get_streamed_response_sync(query: str, resource_name: str) -> str:
-    """
-    A synchronous helper that calls the agent and correctly parses the
-    streaming response dictionaries to build the final response string.
-    """
-    logging.info("Executing synchronous stream_query call in a new thread...")
-    try:
-        remote_agent = vertexai.agent_engines.get(resource_name)
-        stream = remote_agent.stream_query(
-            message=query,
-            user_id="local-orchestrator-agent"
-        )
-        response_parts = []
-        for event in stream:
-            logging.info(f"Received stream event: {event}")
-            if isinstance(event.get("content"), dict):
-                content = event["content"]
-                if isinstance(content.get("parts"), list):
-                    for part in content["parts"]:
-                        if isinstance(part, dict) and "text" in part:
-                            text_chunk = part["text"]
-                            if text_chunk:
-                                logging.info(f"Extracted text chunk: {text_chunk}")
-                                response_parts.append(text_chunk)
-        final_response = "".join(response_parts).strip()
-        if not final_response:
-             logging.info("WARNING: No text parts found in any event from the stream.")
-             return "No text response could be parsed from the remote agent's stream."
-        return final_response
-    except Exception as e:
-        logging.info(f"Error inside synchronous stream helper: {e}")
-        import traceback
-        traceback.print_exc()
-        return f"Error during synchronous stream call: {str(e)}"
-
 async def call_cpu_utilization_agent(project_id: str, zone: str) -> str:
     """
-    Asynchronously calls the remote Agent Engine agent by running the
-    synchronous stream iteration in a separate thread.
+    Asynchronously calls the remote Agent Engine agent to get CPU utilization.
     """
     if not config.REMOTE_CPU_AGENT_RESOURCE_NAME:
         return "Error: REMOTE_CPU_AGENT_RESOURCE_NAME is not set in the environment."
     try:
         query = f"What is the CPU utilization for all VMs in project {project_id} and zone {zone}?"
-        final_response = await asyncio.to_thread(
-            _get_streamed_response_sync,
-            query,
-            config.REMOTE_CPU_AGENT_RESOURCE_NAME
-        )
+        
+        remote_agent = client.agent_engines.get(name=config.REMOTE_CPU_AGENT_RESOURCE_NAME)
+        response_parts = [
+            chunk.text async for chunk in remote_agent.async_stream_query(
+                message=query,
+                user_id="local-orchestrator-agent"
+            )
+        ]
+        final_response = "".join(response_parts).strip()
+
+        if not final_response:
+             logging.info("WARNING: No text parts found in any event from the stream.")
+             return "No text response could be parsed from the remote agent's stream."
+
         logging.info(f"Remote agent returned final response for CPU utilization.")
         return final_response
     except Exception as e:
@@ -193,26 +166,21 @@ client = vertexai.Client(project=config.GOOGLE_PROJECT_ID, location="us-central1
 
 client = vertexai.Client(project=config.GOOGLE_PROJECT_ID, location="us-central1")
 
-async def call_rag_agent_rest(user_query: str) -> str:
+def _get_streamed_response_sync(query: str, resource_name: str) -> str:
     """
-    Calls the RAG agent using the Vertex AI SDK.
+    A synchronous helper that calls the agent and correctly parses the
+    streaming response dictionaries to build the final response string.
     """
-    if not config.REMOTE_RAG_AGENT_RESOURCE_NAME:
-        return "Error: REMOTE_RAG_AGENT_RESOURCE_NAME is not set in the environment."
-
+    print("Executing synchronous stream_query call in a new thread...")
     try:
-        query = f""" Fetch the cloud resource details which was proposed during the design phase for the project/s -> {user_query}. 
-        The response should include the information like name of the cloud service, Type of service (if info available), Size or configuration (CPU/Memory/storage/etc.) 
-        of the service (if available), deployment environment (if available), region/zone/location (if info available)  """
-
-        remote_agent = client.agent_engines.get(name=config.REMOTE_RAG_AGENT_RESOURCE_NAME)
-        stream = remote_agent.async_stream_query(
+        remote_agent = vertexai.agent_engines.get(resource_name)
+        stream = remote_agent.stream_query(
             message=query,
             user_id="local-orchestrator-agent"
         )
         response_parts = []
-        async for event in stream:
-            logging.info(f"Received stream event: {event}")
+        for event in stream:
+            print(f"Received stream event: {event}")
             if isinstance(event.get("content"), dict):
                 content = event["content"]
                 if isinstance(content.get("parts"), list):
@@ -220,19 +188,39 @@ async def call_rag_agent_rest(user_query: str) -> str:
                         if isinstance(part, dict) and "text" in part:
                             text_chunk = part["text"]
                             if text_chunk:
-                                logging.info(f"Extracted text chunk: {text_chunk}")
+                                print(f"Extracted text chunk: {text_chunk}")
                                 response_parts.append(text_chunk)
         final_response = "".join(response_parts).strip()
         if not final_response:
-             logging.info("WARNING: No text parts found in any event from the stream.")
+             print("WARNING: No text parts found in any event from the stream.")
              return "No text response could be parsed from the remote agent's stream."
         return final_response
-
     except Exception as e:
-        logging.error(f"Error in SDK tool 'call_rag_agent_rest': {e}", exc_info=True)
+        print(f"Error inside synchronous stream helper: {e}")
         import traceback
         traceback.print_exc()
-        return f"An unexpected error occurred: {str(e)}"
+        return f"Error during synchronous stream call: {str(e)}"
+
+async def call_cpu_utilization_agent(project_id: str, zone: str) -> str:
+    """
+    Asynchronously calls the remote Agent Engine agent by running the
+    synchronous stream iteration in a separate thread.
+    """
+    print(f"--> [Local Agent Tool] Calling remote agent via asyncio.to_thread")
+    if not config.REMOTE_CPU_AGENT_RESOURCE_NAME:
+        return "Error: REMOTE_CPU_AGENT_RESOURCE_NAME is not set in the environment."
+    try:
+        query = f"What is the CPU utilization for all VMs in project {project_id} and zone {zone}?"
+        final_response = await asyncio.to_thread(
+            _get_streamed_response_sync,
+            query,
+            config.REMOTE_CPU_AGENT_RESOURCE_NAME
+        )
+        print(f"<-- [Remote Agent Final Response] {final_response}")
+        return final_response
+    except Exception as e:
+        print(f"Error in async tool 'call_cpu_utilization_agent': {e}")
+        return f"An unexpected error occurred in the async tool wrapper: {str(e)}"
 
 # =================================================================
 # ### START: REPLACEMENT CODE FOR _get_rag_response_async ###
@@ -304,7 +292,6 @@ def generate_chart_from_data(
 ) -> str:
     """
     Generates a chart from JSON data, uploads it to GCS, and returns a public URL.
-    For bar charts, it also returns a text-based representation.
     
     Args:
         chart_type (str): The type of chart ('bar', 'pie', 'line').
@@ -328,19 +315,9 @@ def generate_chart_from_data(
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
         fig = None
-        text_chart = ""
         if chart_type.lower() == 'bar':
             df_melted = df.melt(id_vars=[x_column], value_vars=y_columns, var_name='Category', value_name='Value')
             fig = px.bar(df_melted, x=x_column, y='Value', color='Category', title=title, barmode='group', template="plotly_white")
-
-            # Generate text-based bar chart
-            text_chart += f"{title}:\n"
-            max_val = df_melted['Value'].max()
-            max_width = 50
-            for index, row in df_melted.iterrows():
-                bar_width = int((row['Value'] / max_val) * max_width)
-                text_chart += f"{row[x_column]:<15} | {'█' * bar_width} {row['Value']:.2f}\n"
-
         elif chart_type.lower() == 'pie':
             fig = px.pie(df, names=labels_column, values=values_column, title=title, template="plotly_white")
         elif chart_type.lower() == 'line':
@@ -361,11 +338,7 @@ def generate_chart_from_data(
 
         logging.info(f"--- [Chart Tool] Successfully uploaded chart to GCS: {blob.public_url} ---")
         
-        response = f"Chart has been generated and is available at: {blob.public_url}"
-        if text_chart:
-            response = f"{text_chart}\n{response}"
-        
-        return response
+        return f"Chart has been generated and is available at: {blob.public_url}"
 
     except Exception as e:
         logging.error(f"Chart generation or GCS upload failed: {e}", exc_info=True)
@@ -381,16 +354,24 @@ def run_bq_query(query: str) -> str:
     All the table attributes are set with descriptions. So chech the description of columns to identify the correct columns and make correct queries.
 
     The table names in your query, like `finoptiagents.finops_cost_usage`, already contain the dataset.
+    ***For exclusive requets on VM Deletion Logs
     Route the requests specific for VM deletion scenarion to table vector-search-poc.finops_agent_logs.vm_deletion_log
-
-    tables in vector-search-poc.finoptiagents dataset
+    ***
+    For any other queries use the following ables in vector-search-poc.finoptiagents dataset
     1. project_information_master: Core project details. This is the central registry of all projects. 
     Use it to find project names, owners, and IDs. The stakeholder details are mentioned in this table, product_owner_name, business_service_owner_name
-    2. project_information_child: Individual cloud resources. This table contains a detailed inventory of every single provisioned resource (like VMs, databases, etc.) for each project.
-    3. finops_cost_usage: Raw monthly cost data with environment break-up. This table holds the raw financial and performance metrics. Use it for detailed analysis of monthly costs and resource utilization percentages.
-    4. servicenow_change_defect: Development tickets. This table tracks active development and bug fixes from ServiceNow. A project with open tickets here is considered "active," justifying its operational costs.
-    5. earb_review: Governance approvals. This table logs which projects have passed the formal Enterprise Architecture Review Board (EARB) process. A missing entry here is a major governance red flag.
-    6. release_train_ticket: Release planning. This table lists projects that are officially part of a planned software release train. The project budget is stored in this table. 
+    2. project_information_child: Individual cloud resources. This table contains a detailed inventory of every single provisioned resource 
+    in a project(like VMs, databases, etc.) for each project.
+    3. finops_cost_usage: Raw monthly cost data with environment break-up. This table holds the raw financial and performance metrics. Use it for detailed 
+    analysis of monthly costs and resource utilization percentages.
+    4. servicenow_change_defect: Development tickets. This table tracks active development and bug fixes from ServiceNow. A project with open tickets here is 
+    considered "active," justifying its operational costs. The entry made for a project is irrespective of the environment. In other words, a ticket raised for 
+    dev environment is impacting the enite project
+    5. earb_review: Governance approvals. This table logs which projects have passed the formal Enterprise Architecture Review Board (EARB) process. A missing 
+    entry here is a major governance red flag.
+    6. release_train_ticket: Release planning. This table lists projects that are officially part of a planned software release train. The project budget is 
+    stored in this table. An entry made for a project, irrespective of environment is considered to be part of the release train.
+
     A project not in this list may be unauthorized or "shadow IT." 
     
     Common Analysis
@@ -530,6 +511,7 @@ root_agent = LlmAgent(
         """You are a comprehensive Google Cloud FinOps assistant named FinOpti. Your primary objective is to analyze cloud cost and utilization data, 
         manage VM resources safely, and present findings clearly to the user.
         For any response where there can be a list of items, or subitems, use numbered and unnumbered list (sub items must be indented) for ethestics.  
+        The cloud resources are running in us-central1 region is in Iowa and contains zones like us-central1-a, us-central1-b, us-central1-c, and us-central1-f
 
     ## Core Capabilities & CRITICAL WORKFLOWS
 
@@ -544,13 +526,13 @@ root_agent = LlmAgent(
     **YOUR CRITICAL TASK FOR ANALYSIS:**
         1.  Understand the user's question.
         2.  Construct the correct BigQuery SQL query, precisely following all schema and best practices above.
-        3.  Execute the query by making a single call to the `run_bq_query` tool.
+        3.  Execute the query bymaking a single call to the `run_bq_query` tool.
         4.  The tool will return a simple text string. You MUST base your final answer **exclusively** on this most recent tool output.
 
     **CRITICAL WORKFLOW: DATA VISUALIZATION**
     When a user asks you to generate a graph or chart, you MUST follow this two-step process:
     1.  **GET DATA:** Use the `run_bq_query` tool to execute the correct SQL query to get the data for the chart.
-    2.  **GENERATE CHART:** Use the `generate_chart_from_data` tool with the data from the previous step. This tool will save the chart to Google Cloud Storage and return a public URL. For bar charts, it will also return a text-based representation.
+    2.  **GENERATE CHART:** Use the `generate_chart_from_data` tool with the data from the previous step. This tool will save the chart to Google Cloud Storage and return a public URL.
 
     **CRITICAL WORKFLOW: GENERATING GRAPHS (MUST FOLLOW)**
     When a user asks for a graph, you MUST follow this two-step process:
@@ -579,7 +561,7 @@ root_agent = LlmAgent(
 
 
     **CRITICAL OUTPUT RULE FOR CHARTS:**
-    After `generate_chart_from_data` returns its output, your final response **MUST BE a message to the user with the text-based chart (if available) and the URL.** For example: "I have generated the chart for you. Here is a preview:\n[text-based chart]\n\nYou can view the full interactive chart here: [URL]".
+    After `generate_chart_from_data` returns a URL, your final response **MUST BE a message to the user with the URL.** For example: "I have generated the chart for you. You can view it here: [URL]".
 
     **--- CAPABILITY 4: Implementation Review (Dynamic RAG) ---**
     - To **check if resources were implemented correctly** according to design documents, you MUST delegate the entire task to the `design_compliance_rag_agent`. 
@@ -591,7 +573,7 @@ root_agent = LlmAgent(
     **--- CAPABILITY 5: Optimization Proposals (using ServiceNow) ---**
     - Propose changes using the `create_servicenow_cr` tool (if available).
 
-    **--- CAPABILITY 6: Data Analysis & Reporting for VM deletion operation---**
+    **--- CAPABILITY 6: Q & A for VM deletion operation---**
         To answer any questions about past deletions, you MUST use the `run_bq_query` tool.
 
         **CRITICAL DATABASE SCHEMA & DATA FORMAT:**
@@ -608,7 +590,25 @@ root_agent = LlmAgent(
 
         3.  **Timestamp Handling:** To handle timestamps, use the full pattern: `DATE(SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', JSON_EXTRACT_SCALAR(PARSE_JSON(JSON_EXTRACT_SCALAR(log_data, '$')), '$.deletion_timestamp_utc')))`
 
-        
+    ## Error Handling and Retries
+
+    When you encounter an error and need to retry, do not just state the error. Instead, use one of the following approaches to communicate with the user:
+
+    **The "Confident Assistant" approach:**
+    - "That didn't work as expected. Let me try a different approach."
+    - "It seems the data structure has changed. I'll adjust my query and try again."
+    - "I'm having a bit of trouble accessing that information. I'll try a different method to get it for you."
+
+    **The "Collaborative Partner" approach:**
+    - "Hmm, that's not giving me what I need. Let's try looking at it from another angle."
+    - "It looks like the data source is not responding as expected. I'm going to try to get the information from a different source."
+    - "This is a tricky one. I'm going to try to simplify my request to the database to see if that works."
+
+    **General Guidelines for Error Messages:**
+    - **Be brief:** Get to the point quickly.
+    - **Be confident:** Don't sound like you are failing. Sound like you are problem-solving.
+    - **Be transparent (but not too technical):** Briefly explain what you are doing next.
+    - **Avoid excessive apologies:** One apology is enough.
 
     ## General Guardrails
     - Be professional, concise, and data-driven in all your communications."""
