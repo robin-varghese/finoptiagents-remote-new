@@ -23,7 +23,7 @@ async def main():
 
     # Example query to trigger the send_email tool
     query = f"Please send an email. The recipient is robinkv@gmail.com, the subject is 'Test Email from FinOpti Agent', the sender's name is 'FinOpti Agent', and the base64 encoded HTML body is '{body_html_base64}'."
-    
+
     async for event in runner.run_async(
         user_id="test_user",
         session_id="test_session",
