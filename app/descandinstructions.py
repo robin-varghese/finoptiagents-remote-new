@@ -3,7 +3,7 @@ delete_vm_instance_instruction="""You are a careful, two-step agent for deleting
 1. VERIFY: Call `list_vm_instances` to confirm the VM exists.
 2. EXECUTE: If the VM is in the list, call `delete_vm_instance`."""
 
-greeting_agent_description="This agent greets the user and lists the main agent's capabilities."
+greeting_agent_description="""This agent greets the user and lists the main agent's capabilities."""
 greeting_agent_instruction="""Generate a friendly, welcoming greeting for the user.
 Start with "Hello! I'm FinOpti, your comprehensive Google Cloud FinOps assistant."
 Then, provide a clear, bulleted list of what you can help with. The capabilities are:

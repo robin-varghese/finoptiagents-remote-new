@@ -643,15 +643,17 @@ dependencies = [
     { name = "google-adk" },
     { name = "google-cloud-aiplatform", extra = ["agent-engines", "evaluation"] },
     { name = "google-cloud-logging" },
+    { name = "google-genai" },
+    { name = "nest-asyncio" },
     { name = "openai" },
     { name = "opentelemetry-exporter-gcp-trace" },
+    { name = "plotly" },
     { name = "requests" },
     { name = "toolbox-core" },
 ]
 
 [package.optional-dependencies]
 dev = [
-    { name = "nest-asyncio" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "streamlit" },
@@ -673,11 +675,13 @@ requires-dist = [
     { name = "google-adk", specifier = "~=1.8.0" },
     { name = "google-cloud-aiplatform", extras = ["evaluation", "agent-engines"], specifier = "~=1.106.0" },
     { name = "google-cloud-logging", specifier = "~=3.11.4" },
+    { name = "google-genai" },
     { name = "jupyter", marker = "extra == 'jupyter'", specifier = "~=1.0.0" },
     { name = "mypy", marker = "extra == 'lint'", specifier = "~=1.15.0" },
-    { name = "nest-asyncio", marker = "extra == 'dev'", specifier = ">=1.6.0" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "openai", specifier = "~=1.82.0" },
     { name = "opentelemetry-exporter-gcp-trace", specifier = "~=1.9.0" },
+    { name = "plotly" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.8" },
     { name = "requests" },
@@ -2505,6 +2509,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fe/8b/3c73abc9c759ecd3f1f7ceff6685840859e8070c4d947c93fae71f6a0bf2/platformdirs-4.3.8.tar.gz", hash = "sha256:3d512d96e16bcb959a814c9f348431070822a6496326a4be0911c40b5a74c2bc", size = 21362 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/39/979e8e21520d4e47a0bbe349e2713c0aac6f3d853d0e5b34d76206c439aa/platformdirs-4.3.8-py3-none-any.whl", hash = "sha256:ff7059bb7eb1179e2685604f4aaf157cfd9535242bd23742eadc3c13542139b4", size = 18567 },
+]
+
+[[package]]
+name = "plotly"
+version = "6.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "narwhals" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/63/961d47c9ffd592a575495891cdcf7875dc0903ebb33ac238935714213789/plotly-6.3.1.tar.gz", hash = "sha256:dd896e3d940e653a7ce0470087e82c2bd903969a55e30d1b01bb389319461bb0", size = 6956460 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/93/023955c26b0ce614342d11cc0652f1e45e32393b6ab9d11a664a60e9b7b7/plotly-6.3.1-py3-none-any.whl", hash = "sha256:8b4420d1dcf2b040f5983eed433f95732ed24930e496d36eb70d211923532e64", size = 9833698 },
 ]
 
 [[package]]

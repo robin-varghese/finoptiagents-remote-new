@@ -13,6 +13,9 @@ dependencies = [
     "openai~=1.82.0",
     "toolbox-core",
     "requests",
+    "nest-asyncio>=1.6.0",
+    "google-genai",
+    "plotly",
 ]
 
 requires-python = ">=3.10,<3.13"
@@ -21,7 +24,6 @@ requires-python = ">=3.10,<3.13"
 dev = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.23.8",
-    "nest-asyncio>=1.6.0",
     "streamlit",
 ]
 jupyter = [

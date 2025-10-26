@@ -12,7 +12,7 @@ from google.cloud import secretmanager
 import logging
 from google.api_core import exceptions
 import vertexai
-import google.generativeai as genai
+import google.genai as genai
 
 # =======================================================================================
 # 1. Centralized Logging Configuration
@@ -118,10 +118,7 @@ if GOOGLE_PROJECT_ID and GOOGLE_ZONE:
         logging.error(f"Failed to initialize Vertex AI: {e}", exc_info=True)
 
 if GOOGLE_API_KEY:
-    try:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        logging.info("Google Generative AI client configured successfully.")
-    except Exception as e:
-        logging.error(f"Failed to configure Generative AI client: {e}", exc_info=True)
+    os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
+    logging.info("Google API Key set as environment variable.")
 else:
     logging.warning("GOOGLE_API_KEY not found. Some Generative AI features may not be available.")

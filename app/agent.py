@@ -1,6 +1,6 @@
 import nest_asyncio
 
-nest_asyncio.apply()
+
 
 # =======================================================================================
 # ### --- START: COMPLETE AGENT FILE (DEFINITIVE SIMPLIFIED SOLUTION) --- ###
@@ -19,7 +19,7 @@ from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 import google.auth
-import google.generativeai as genai
+import google.genai as genai
 import pandas as pd
 import plotly.express as px
 import requests
@@ -62,7 +62,7 @@ from .tools.run_bq_query import run_bq_query
 from .tools.call_cpu_utilization_agent import call_cpu_utilization_agent
 from . import descandinstructions
 
-
+nest_asyncio.apply()
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
     callback_context: CallbackContext, llm_request: LlmRequest
@@ -127,7 +127,7 @@ greeting_agent = LlmAgent(
     name="Greeter",
     model="gemini-2.0-flash",
     description=descandinstructions.greeting_agent_description,
-    instruction=descandinstructions.greeting_agent_instruction,)
+    instruction=descandinstructions.greeting_agent_instruction)
 
 # --- The Single, Simplified, and Robust RAG Agent ---
 # --- CORRECTED DEBUGGING CALLBACK ---
