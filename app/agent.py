@@ -1,62 +1,19 @@
 import nest_asyncio
-
-
-
 # =======================================================================================
 # ### --- START: COMPLETE AGENT FILE (DEFINITIVE SIMPLIFIED SOLUTION) --- ###
 # =======================================================================================
-
 # 1. --- IMPORTS ---
-import asyncio  # noqa: E402
-import datetime  # noqa: E402
-import json
 import logging
-import os
-import textwrap
-import time
-import uuid
-from typing import List, Optional
-from zoneinfo import ZoneInfo
+from typing import Optional
 
-import google.auth
-import google.genai as genai
-import pandas as pd
-import plotly.express as px
-import requests
-import vertexai
-import vertexai.agent_engines
-from dotenv import load_dotenv
-from google.adk.agents import Agent, BaseAgent, LlmAgent, LoopAgent, SequentialAgent
+from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.events import Event, EventActions
 from google.adk.models import LlmRequest, LlmResponse
-from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService, Session, VertexAiSessionService
-from google.adk.tools import ToolContext
-from google.adk.tools.bigquery import BigQueryCredentialsConfig, BigQueryToolset                                             
-from google.api_core import exceptions
-from google.cloud import bigquery, secretmanager, storage
 from google.genai import types
-from pydantic import BaseModel
-
-from . import config
-
-#------Start-RAG implementtaion 
-from .tools.add_data import add_data
-from .tools.create_corpus import create_corpus
-from .tools.delete_corpus import delete_corpus
-from .tools.delete_document import delete_document
-from .tools.get_corpus_info import get_corpus_info
-from .tools.list_corpora import list_corpora
-from .tools.rag_query import rag_query
-from .utils.embeddings import generate_combined_embedding
-
 
 from .tools.delete_vm_instance import delete_vm_instance
-from .tools.log_vm_deletion_to_bigquery import log_vm_deletion_to_bigquery
 from .tools.list_vm_instances import list_vm_instances
 from .tools.send_email import send_email
-from .tools.search_tool import search_tool
 from .tools.generate_chart_from_data import generate_chart_from_data
 from .tools.run_bq_query import run_bq_query
 from .tools.call_cpu_utilization_agent import call_cpu_utilization_agent
@@ -127,7 +84,8 @@ greeting_agent = LlmAgent(
     name="Greeter",
     model="gemini-2.0-flash",
     description=descandinstructions.greeting_agent_description,
-    instruction=descandinstructions.greeting_agent_instruction)
+    instruction=descandinstructions.greeting_agent_instruction
+)
 
 # --- The Single, Simplified, and Robust RAG Agent ---
 # --- CORRECTED DEBUGGING CALLBACK ---
@@ -138,7 +96,6 @@ def debug_after_model(callback_context, llm_response):
     """
     logging.debug("="*50)
     logging.debug(f"INTERCEPTING MODEL RESPONSE for agent: {callback_context.agent_name}")
-    
     # The llm_response object contains the model's output.
     # We are interested in the tool_calls part.
     logging.debug("--- RAW LLM Response ---")
