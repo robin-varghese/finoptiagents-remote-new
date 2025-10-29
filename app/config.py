@@ -95,11 +95,11 @@ GOOGLE_API_KEY = _fetch_config("google-api-key")
 GOOGLE_ZONE = _fetch_config("google-zone") or os.environ.get("GOOGLE_CLOUD_LOCATION")
 REMOTE_CPU_AGENT_RESOURCE_NAME = _fetch_config("remote-cpu-agent-resource-name")
 REMOTE_RAG_AGENT_RESOURCE_NAME = _fetch_config("remote-rag-agent-resource-name")
-EARB_DESIGNDOCS = _fetch_config("earb-designdocs")  # e.g., "gs://my-finops-design-docs-bucket"
+EARB_DESIGNDOCS = _fetch_config("rag-earb-designdocs")  # e.g., "gs://my-finops-design-docs-bucket"
 
 # --- ADDED FOR BACKWARDS COMPATIBILITY ---
 LOCATION = GOOGLE_ZONE
-RAG_REGION = "us-east4"
+RAG_REGION = _fetch_config("rag-engine-location")
 
 logging.info("--- Configuration loading complete. ---")
 
@@ -107,12 +107,12 @@ logging.info("--- Configuration loading complete. ---")
 # =======================================================================================
 # 6. Initialize Google Cloud Services
 # =======================================================================================
-if GOOGLE_PROJECT_ID and GOOGLE_ZONE:
-    # Vertex AI SDK requires a region (e.g., "us-central1"), not a zone (e.g., "us-central1-a")
-    google_region = "-".join(GOOGLE_ZONE.split("-")[:-1])
+if GOOGLE_PROJECT_ID and RAG_REGION:
+    # Vertex AI SDK requires a region (e.g., "us-central1", "us-east4"), not a zone (e.g., "us-central1-a")
+    #google_region = "-".join(RAG_REGION.split("-")[:-1])
     try:
-        logging.info(f"Initializing Vertex AI for project '{GOOGLE_PROJECT_ID}' in region '{google_region}'...")
-        vertexai.init(project=GOOGLE_PROJECT_ID, location=google_region)
+        logging.info(f"Initializing Vertex AI for project '{GOOGLE_PROJECT_ID}' in region '{RAG_REGION}'...")
+        vertexai.init(project=GOOGLE_PROJECT_ID, location=RAG_REGION)
         logging.info("Vertex AI initialized successfully.")
     except Exception as e:
         logging.error(f"Failed to initialize Vertex AI: {e}", exc_info=True)

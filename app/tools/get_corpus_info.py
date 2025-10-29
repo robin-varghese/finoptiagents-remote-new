@@ -2,10 +2,14 @@
 Tool for retrieving detailed information about a specific RAG corpus.
 """
 
+import logging
+
 from google.adk.tools.tool_context import ToolContext
 from vertexai import rag
 
-from .utils import check_corpus_exists, get_corpus_resource_name
+from .rag_utils import check_corpus_exists, get_corpus_resource_name
+
+logger = logging.getLogger(__name__)
 
 
 def get_corpus_info(
@@ -26,6 +30,7 @@ def get_corpus_info(
     try:
         # Check if corpus exists
         if not check_corpus_exists(corpus_name, tool_context):
+            logger.warning(f"Corpus '{corpus_name}' does not exist.")
             return {
                 "status": "error",
                 "message": f"Corpus '{corpus_name}' does not exist",
@@ -42,7 +47,9 @@ def get_corpus_info(
         file_details = []
         try:
             # Get the list of files
+            logger.info(f"Listing files for corpus '{corpus_name}'.")
             files = rag.list_files(corpus_resource_name)
+            logger.info(f"Found {len(files)} files.")
             for rag_file in files:
                 # Get document specific details
                 try:
@@ -74,17 +81,21 @@ def get_corpus_info(
                     }
 
                     file_details.append(file_info)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Could not process file: {e}")
                     # Continue to the next file
                     continue
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Could not list files for corpus '{corpus_name}': {e}")
             # Continue without file details
             pass
 
+        success_message = f"Successfully retrieved information for corpus '{corpus_display_name}'"
+        logger.info(success_message)
         # Basic corpus info
         return {
             "status": "success",
-            "message": f"Successfully retrieved information for corpus '{corpus_display_name}'",
+            "message": success_message,
             "corpus_name": corpus_name,
             "corpus_display_name": corpus_display_name,
             "file_count": len(file_details),
@@ -92,6 +103,7 @@ def get_corpus_info(
         }
 
     except Exception as e:
+        logger.error(f"Error getting corpus information: {str(e)}")
         return {
             "status": "error",
             "message": f"Error getting corpus information: {str(e)}",

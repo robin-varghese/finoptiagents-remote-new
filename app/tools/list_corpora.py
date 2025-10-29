@@ -2,9 +2,12 @@
 Tool for listing all available Vertex AI RAG corpora.
 """
 
+import logging
 from typing import Dict, List, Union
 
 from vertexai import rag
+
+logger = logging.getLogger(__name__)
 
 
 def list_corpora() -> dict:
@@ -20,7 +23,9 @@ def list_corpora() -> dict:
     """
     try:
         # Get the list of corpora
+        logger.info("Listing all available corpora.")
         corpora = rag.list_corpora()
+        logger.info(f"Found {len(corpora)} corpora.")
 
         # Process corpus information into a more usable format
         corpus_info: List[Dict[str, Union[str, int]]] = []
@@ -38,12 +43,15 @@ def list_corpora() -> dict:
 
             corpus_info.append(corpus_data)
 
+        success_message = f"Found {len(corpus_info)} available corpora"
+        logger.info(success_message)
         return {
             "status": "success",
-            "message": f"Found {len(corpus_info)} available corpora",
+            "message": success_message,
             "corpora": corpus_info,
         }
     except Exception as e:
+        logger.error(f"Error listing corpora: {str(e)}")
         return {
             "status": "error",
             "message": f"Error listing corpora: {str(e)}",

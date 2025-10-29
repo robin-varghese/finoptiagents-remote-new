@@ -19,6 +19,18 @@ from .tools.run_bq_query import run_bq_query
 from .tools.call_cpu_utilization_agent import call_cpu_utilization_agent
 from . import descandinstructions
 
+from google.adk.agents import Agent
+
+from .tools.add_data import add_data
+from .tools.create_corpus import create_corpus
+from .tools.delete_corpus import delete_corpus
+from .tools.delete_document import delete_document
+from .tools.get_corpus_info import get_corpus_info
+from .tools.list_corpora import list_corpora
+from .tools.rag_query import rag_query
+
+logger = logging.getLogger(__name__)
+
 nest_asyncio.apply()
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
@@ -102,27 +114,52 @@ def debug_after_model(callback_context, llm_response):
     logging.debug(llm_response)
     logging.debug("="*50)
 
-# --- Final, Simplified Root Agent ---
-root_agent = LlmAgent(
-    name="finops_optimization_agent",
-    model="gemini-2.0-flash",
-    description=descandinstructions.root_agent_description,
-    instruction=(descandinstructions.root_agent_instruction),
-    # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
-    tools=[
-        list_vm_instances,
-        #search_tool,
-        call_cpu_utilization_agent,
-        run_bq_query,
-        generate_chart_from_data,
-        send_email,
-        # <-- ADDED HERE
-        # earb_compliance_agent, # <-- REMOVED FROM HERE
-    ],
-    sub_agents=[
-        delete_vm_instance_agent,
-        greeting_agent, # <-- ADDED HERE
-    ],
-    before_model_callback=simple_before_model_modifier,
-)
 
+
+try:
+    design_compliance_check_rag_agent = Agent(
+        name="design_compliance_check_rag_agent",
+        # Using Gemini 2.5 Flash for best performance with RAG operations
+        model="gemini-2.5-flash",
+        description=descandinstructions.rag_agent_description,
+        tools=[
+            rag_query,
+            list_corpora,
+            create_corpus,
+            add_data,
+            get_corpus_info,
+            delete_corpus,
+            delete_document,
+        ],
+        instruction=descandinstructions.rag_agent_instruction,
+    )
+
+
+
+    # --- Final, Simplified Root Agent ---
+    root_agent = LlmAgent(
+        name="finops_optimization_agent",
+        model="gemini-2.0-flash",
+        description=descandinstructions.root_agent_description,
+        instruction=(descandinstructions.root_agent_instruction),
+        # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
+        tools=[
+            list_vm_instances,
+            #search_tool,
+            call_cpu_utilization_agent,
+            run_bq_query,
+            generate_chart_from_data,
+            send_email,
+        ],
+        sub_agents=[
+            delete_vm_instance_agent,
+            greeting_agent,
+            design_compliance_check_rag_agent,
+        ],
+        before_model_callback=simple_before_model_modifier,
+    )
+
+    logger.info("Agent created successfully.")
+except Exception as e:
+    logger.error(f"Failed to create agent: {e}")
+    raise

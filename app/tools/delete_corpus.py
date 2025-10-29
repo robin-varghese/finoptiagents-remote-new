@@ -2,10 +2,14 @@
 Tool for deleting a Vertex AI RAG corpus when it's no longer needed.
 """
 
+import logging
+
 from google.adk.tools.tool_context import ToolContext
 from vertexai import rag
 
-from .utils import check_corpus_exists, get_corpus_resource_name
+from .rag_utils import check_corpus_exists, get_corpus_resource_name
+
+logger = logging.getLogger(__name__)
 
 
 def delete_corpus(
@@ -26,40 +30,47 @@ def delete_corpus(
     Returns:
         dict: Status information about the deletion operation
     """
-    # Check if corpus exists
-    if not check_corpus_exists(corpus_name, tool_context):
-        return {
-            "status": "error",
-            "message": f"Corpus '{corpus_name}' does not exist",
-            "corpus_name": corpus_name,
-        }
-
-    # Check if deletion is confirmed
-    if not confirm:
-        return {
-            "status": "error",
-            "message": "Deletion requires explicit confirmation. Set confirm=True to delete this corpus.",
-            "corpus_name": corpus_name,
-        }
-
     try:
+        # Check if corpus exists
+        if not check_corpus_exists(corpus_name, tool_context):
+            logger.warning(f"Corpus '{corpus_name}' does not exist.")
+            return {
+                "status": "error",
+                "message": f"Corpus '{corpus_name}' does not exist",
+                "corpus_name": corpus_name,
+            }
+
+        # Check if deletion is confirmed
+        if not confirm:
+            logger.warning("Deletion not confirmed.")
+            return {
+                "status": "error",
+                "message": "Deletion requires explicit confirmation. Set confirm=True to delete this corpus.",
+                "corpus_name": corpus_name,
+            }
+
         # Get the corpus resource name
         corpus_resource_name = get_corpus_resource_name(corpus_name)
 
         # Delete the corpus
+        logger.info(f"Deleting corpus '{corpus_name}'.")
         rag.delete_corpus(corpus_resource_name)
+        logger.info("Corpus deleted successfully.")
 
         # Remove from state by setting to False
         state_key = f"corpus_exists_{corpus_name}"
         if state_key in tool_context.state:
             tool_context.state[state_key] = False
 
+        success_message = f"Successfully deleted corpus '{corpus_name}'"
+        logger.info(success_message)
         return {
             "status": "success",
-            "message": f"Successfully deleted corpus '{corpus_name}'",
+            "message": success_message,
             "corpus_name": corpus_name,
         }
     except Exception as e:
+        logger.error(f"Error deleting corpus: {str(e)}")
         return {
             "status": "error",
             "message": f"Error deleting corpus: {str(e)}",

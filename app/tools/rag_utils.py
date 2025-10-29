@@ -27,36 +27,40 @@ def get_corpus_resource_name(corpus_name: str) -> str:
     Returns:
         str: The full resource name of the corpus
     """
-    logger.info(f"Getting resource name for corpus: {corpus_name}")
-
-    # If it's already a full resource name with the projects/locations/ragCorpora format
-    if re.match(r"^projects/[^/]+/locations/[^/]+/ragCorpora/[^/]+$", corpus_name):
-        return corpus_name
-
-    # Check if this is a display name of an existing corpus
     try:
-        # List all corpora and check if there's a match with the display name
-        corpora = rag.list_corpora()
-        for corpus in corpora:
-            if hasattr(corpus, "display_name") and corpus.display_name == corpus_name:
-                return corpus.name
+        logger.info(f"Getting resource name for corpus: {corpus_name}")
+
+        # If it's already a full resource name with the projects/locations/ragCorpora format
+        if re.match(r"^projects/[^/]+/locations/[^/]+/ragCorpora/[^/]+$", corpus_name):
+            return corpus_name
+
+        # Check if this is a display name of an existing corpus
+        try:
+            # List all corpora and check if there's a match with the display name
+            corpora = rag.list_corpora()
+            for corpus in corpora:
+                if hasattr(corpus, "display_name") and corpus.display_name == corpus_name:
+                    return corpus.name
+        except Exception as e:
+            logger.warning(f"Error when checking for corpus display name: {str(e)}")
+            # If we can't check, continue with the default behavior
+            pass
+
+        # If it contains partial path elements, extract just the corpus ID
+        if "/" in corpus_name:
+            # Extract the last part of the path as the corpus ID
+            corpus_id = corpus_name.split("/")[-1]
+        else:
+            corpus_id = corpus_name
+
+        # Remove any special characters that might cause issues
+        corpus_id = re.sub(r"[^a-zA-Z0-9_-]", "_", corpus_id)
+
+        # Construct the standardized resource name
+        return f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{corpus_id}"
     except Exception as e:
-        logger.warning(f"Error when checking for corpus display name: {str(e)}")
-        # If we can't check, continue with the default behavior
-        pass
-
-    # If it contains partial path elements, extract just the corpus ID
-    if "/" in corpus_name:
-        # Extract the last part of the path as the corpus ID
-        corpus_id = corpus_name.split("/")[-1]
-    else:
-        corpus_id = corpus_name
-
-    # Remove any special characters that might cause issues
-    corpus_id = re.sub(r"[^a-zA-Z0-9_-]", "_", corpus_id)
-
-    # Construct the standardized resource name
-    return f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{corpus_id}"
+        logger.error(f"Error getting corpus resource name: {e}")
+        raise
 
 
 def check_corpus_exists(corpus_name: str, tool_context: ToolContext) -> bool:
@@ -70,11 +74,11 @@ def check_corpus_exists(corpus_name: str, tool_context: ToolContext) -> bool:
     Returns:
         bool: True if the corpus exists, False otherwise
     """
-    # Check state first if tool_context is provided
-    if tool_context.state.get(f"corpus_exists_{corpus_name}"):
-        return True
-
     try:
+        # Check state first if tool_context is provided
+        if tool_context.state.get(f"corpus_exists_{corpus_name}"):
+            return True
+
         # Get full resource name
         corpus_resource_name = get_corpus_resource_name(corpus_name)
 
@@ -110,8 +114,13 @@ def set_current_corpus(corpus_name: str, tool_context: ToolContext) -> bool:
     Returns:
         bool: True if the corpus exists and was set as current, False otherwise
     """
-    # Check if corpus exists first
-    if check_corpus_exists(corpus_name, tool_context):
-        tool_context.state["current_corpus"] = corpus_name
-        return True
-    return False
+    try:
+        # Check if corpus exists first
+        if check_corpus_exists(corpus_name, tool_context):
+            logger.info(f"Setting current corpus to '{corpus_name}'.")
+            tool_context.state["current_corpus"] = corpus_name
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error setting current corpus: {e}")
+        return False
