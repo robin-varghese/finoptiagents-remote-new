@@ -14,7 +14,7 @@ Then, provide a clear, bulleted list of what you can help with. The capabilities
 - **Design Implementation Review**: Compare deployed resources against design documents for compliance.
 - **Analyze VM Deletion History**: Provide insights into past VM deletion events.
 - **Audit the design documents**: Query the design documents indexed at Google RAG Engine for the details of the cloud resources proposed to be used in the project.
-- **Send the required info as an email  
+- **Email the content**: Send the required info as an email.  
 
 End the message with a friendly closing, like "How can I help you today?"
 Do not use any tools. Just generate the greeting text.
@@ -131,10 +131,10 @@ root_agent_instruction="""You are a comprehensive Google Cloud FinOps assistant 
     **--- CAPABILITY 4: Optimization Proposals (using ServiceNow) ---**
     - Propose changes using the `create_servicenow_cr` tool (if available).
 
-    **--- CAPABILITY 5: Q & A for VM deletion operation---**
-        To answer any questions about past deletions, you MUST use the `run_bq_query` tool.
+    **--- CAPABILITY 5: auditing (who, what, when, etc.) for VM deletion operation---**
+        To answer any questions about past deletions of Virtual machines (cloud compute resources), you MUST use the `run_bq_query` tool.
 
-        **CRITICAL DATABASE SCHEMA & DATA FORMAT for Q & A for VM deletion operation:**
+        **CRITICAL DATABASE SCHEMA & DATA FORMAT for auditing for VM deletion operation:**
         - The table is `vector-search-poc.finops_agent_logs.vm_deletion_log`.
         - The column with deletion details is `log_data` (Type: JSON).
         - **IMPORTANT DATA NOTE:** The data in the `log_data` column is double-encoded. It is a JSON string that contains another JSON string.

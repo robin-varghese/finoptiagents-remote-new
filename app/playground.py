@@ -48,6 +48,7 @@ from app.agent import root_agent, greeting_agent
 sample_prompts = {
     "FinOps Analyst / Cloud Financial Manager": [
         "What Data Analysis & Reporting can you do",
+        "can you send me an email about the information (explanatory) about FinOptiagents Data Analysis & Reporting capabilities? My name=Robin Varghese, email=robinkv@gmail.com, subject=FinOptiagents Data Analysis & Reporting capabilities",
         "As part of the Budgeted & actual cost spent analysis, can you identify which are the good projects and which are the bad projects",
         "as part of Non-Compliance Analysis can you list out all projects in the category and the reasons and actions needed",
         "can you run utlization analysis and identify which are the projects spending more in production than lower environment",
@@ -56,6 +57,7 @@ sample_prompts = {
         "tell me which project in our organization is using these resources and the resource utlization is less than 50%",
         "which are the projects having lower environments but doesn\'t have any tickets for release (change request or defects)",
         "can you generate a graph to send to my manager to show the cloud spend for every project",
+        "Please review the design document with EARB for the projects and check which are projects deviated during the implementation in-terms of Cloud resources",
     ],
     "Engineering Manager / Team Lead": [
         "who are the stakeholders of these projects",
