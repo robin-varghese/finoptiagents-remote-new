@@ -139,7 +139,10 @@ try:
     # --- Final, Simplified Root Agent ---
     root_agent = LlmAgent(
         name="finops_optimization_agent",
-        model="gemini-2.0-flash",
+        # IMPORTANT: Bidirectional streaming requires a model that supports this feature,
+        # often a "Live" or "Express" version. The name below is an example;
+        # you must use the specific model name provided for this capability.
+        model="gemini-2.0-flash-exp",
         description=descandinstructions.root_agent_description,
         instruction=(descandinstructions.root_agent_instruction),
         # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---

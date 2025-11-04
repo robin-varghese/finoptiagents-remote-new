@@ -1,0 +1,66 @@
+### **Strategy: Enabling Bidirectional Voice in the ADK Web Playground**
+
+The goal is to activate voice interaction by making configuration changes on the backend and leveraging the existing `adk web` playground as the user interface. This strategy's success depends on the built-in capabilities of the playground UI.
+
+---
+
+#### **Core Concept: Division of Responsibility**
+
+It's helpful to think of this as two separate parts:
+1.  **The Backend (Your Agent):** You are responsible for configuring your agent to be "voice-ready."
+2.  **The Frontend (ADK Playground):** The playground is responsible for providing the user-facing controls (like a microphone button) and handling the browser-side audio.
+
+Our strategy will be to configure the backend first, and then verify if the frontend playground responds to that configuration.
+
+---
+
+### **Step 1: Configure Your Backend for Voice**
+
+This is the part you control. You need to tell the ADK framework that your agent is ready for a voice conversation.
+
+**A. Update Your Agent's Model**
+*   **Action:** In your `app/agent.py` file, you must change the `model` used by your `root_agent`.
+*   **Reason:** Real-time voice conversation requires a model specifically optimized for low-latency, streaming interactions. You will need to replace the current model with a "Live" or "Express" version of Gemini that supports this capability.
+
+**B. Configure the ADK Runner for Audio Streaming**
+*   **Action:** You must configure the ADK `Runner` to operate in bidirectional streaming mode and to produce audio as an output. This is done by setting a default `RunConfig`.
+*   **Reason:** This tells the ADK to automatically handle the complex Speech-to-Text and Text-to-Speech processing.
+*   **Implementation:** Since `adk web` launches its own runner, you need to find the correct entry point to apply this configuration. You would likely need to modify a file like `app/agent_engine_app.py` or a similar file that `adk web` uses to load your agent, wrapping your `root_agent` with these default run settings.
+
+```python
+# This configuration would be applied in your agent's entry-point file
+from google.adk.runtime.runner import StreamingMode
+from google.genai import types as genai_types
+
+# Define the default configuration for all voice sessions
+BIDI_RUN_CONFIG = genai_types.RunConfig(
+    streaming_mode=StreamingMode.BIDI,
+    response_modalities=['TEXT', 'AUDIO']
+)
+
+# You would then need to ensure this config is used by the runner
+# that serves your agent.
+```
+
+### **Step 2: Verify if the ADK Playground Supports Voice**
+
+This is the critical diagnostic step. Once your backend is configured for voice, you need to check if the pre-built `adk web` UI recognizes it.
+
+*   **Action:** Run the `adk web` command as usual.
+*   **Observe the UI:** Carefully inspect the chat interface. Look for:
+    *   A new microphone icon or a "Start Voice" button.
+    *   Any settings or options related to audio input/output.
+*   **Check Browser Developer Tools:** Look at the network tab to see if the page attempts to establish a WebSocket (`ws://`) connection.
+
+### **Step 3: Determine the Path Forward**
+
+The results of Step 2 will determine your next actions.
+
+**Scenario A: The Playground Has Built-in Voice Controls**
+*   If a microphone icon appears after you've configured the backend, then your task is mostly complete.
+*   **Conclusion:** The `adk web` tool is designed to automatically enable its client-side voice features when it detects that the loaded agent is configured for audio streaming. Your strategy is successful.
+
+**Scenario B: The Playground Does NOT Have Voice Controls (More Likely)**
+*   If, after configuring the backend, the UI looks exactly the same with no microphone or voice options, it means the default playground does not have the necessary client-side code to handle voice.
+*   **Conclusion:** The goal of using the *existing* playground UI for voice is **not achievable**.
+*   **Next Step:** If you still want to implement voice, you must revert to the original strategy of building your own custom client-side UI (using HTML and JavaScript with `MediaRecorder`, `AudioContext`, and WebSockets) that connects to a custom FastAPI server running your agent.

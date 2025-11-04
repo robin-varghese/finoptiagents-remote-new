@@ -1,0 +1,46 @@
+
+This document outlines the Generative AI (GenAI) and AI Agentic features of the FinOpti platform.
+
+**Generative AI (GenAI) Features**
+
+The platform leverages GenAI to provide a natural and intuitive user experience, automating complex tasks through language understanding and generation.
+
+*   **Natural Language Interaction:** The core of the platform is its ability to understand and respond to user requests in natural language. The AI assistant, FinOpti, can engage in conversations, understand user intent, and provide relevant information and actions.
+
+*   **Data Analysis & Reporting:** FinOpti can answer complex questions about cloud costs, usage, and compliance. It achieves this by:
+    1.  Understanding the user's question.
+    2.  Generating a BigQuery SQL query to retrieve the necessary data.
+    3.  Executing the query using the `run_bq_query` tool.
+    4.  Summarizing the results in a clear and understandable natural language response.
+
+*   **Data Visualization:** The platform can automatically generate charts and graphs from your cloud data. This process involves:
+    1.  Understanding the user's request for a visualization.
+    2.  Querying the relevant data from BigQuery.
+    3.  Using the `generate_chart_from_data` tool to create the chart and provide a shareable URL.
+
+*   **Retrieval-Augmented Generation (RAG):** FinOpti can answer questions and provide information from a knowledge base of documents. This is used for:
+    *   **Design Compliance Review:** Comparing deployed cloud resources against design documents to identify discrepancies.
+    *   **Answering questions from documentation:** Querying indexed documents to provide detailed answers.
+    The `rag_query` and related tools (`create_corpus`, `add_data`, etc.) power this capability.
+
+*   **Email Generation:** The agent can compose and send emails. It can summarize previous conversations or specific content and send it to a specified recipient using the `send_email` tool.
+
+**AI Agentic Features**
+
+The platform's AI agentic features enable it to perform actions, make decisions, and interact with its environment in a sophisticated and autonomous manner.
+
+*   **Tool Use:** The agent is equipped with a wide range of tools to interact with the Google Cloud environment and other services. These tools allow the agent to perform actions such as:
+    *   **VM Management:** Listing, deleting, and checking CPU utilization of VMs (`list_vm_instances`, `delete_vm_instance`, `call_cpu_utilization_agent`).
+    *   **Data Management:** Running BigQuery queries (`run_bq_query`), managing RAG corpora (`create_corpus`, `add_data`, `delete_corpus`, `delete_document`, `get_corpus_info`), and logging events to BigQuery (`log_vm_deletion_to_bigquery`).
+    *   **Communication:** Sending emails (`send_email`).
+    *   **Search:** Performing searches using an external tool (`search_tool`).
+
+*   **Multi-step Reasoning & Planning:** The agent can break down complex user requests into a sequence of smaller, manageable steps. This is evident in its "CRITICAL WORKFLOWS," such as the two-step process for generating charts or the multi-step procedure for conducting a design compliance check.
+
+*   **Delegation:** The root agent can delegate specific tasks to specialized sub-agents. For example, the task of deleting a VM is delegated to the `delete_vm_instance_agent` to ensure it is handled with care.
+
+*   **Careful and Safe Execution:** The agent is designed to be cautious. For instance, before deleting a VM, it first verifies that the VM exists. This prevents accidental deletions and demonstrates a level of prudence in its actions.
+
+*   **Advanced Error Handling and Strategic Retries:** The agent has a sophisticated error handling mechanism. When a tool fails, it doesn't simply give up. Instead, it recalibrates its approach and retries with a different strategy. This is guided by an "Escalation Ladder" that uses different communication personas (The Decisive Strategist, The Expert Navigator, The Creative Problem-Solver) to keep the user informed of its progress.
+
+*   **State Management:** The agent maintains the context of the conversation and the state of its operations. It uses a `ToolContext` to store and retrieve information, allowing it to perform multi-step tasks and remember details from previous interactions.

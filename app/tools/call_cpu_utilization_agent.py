@@ -6,7 +6,7 @@ import vertexai
 
 from .. import config
 
-client = vertexai.Client(project=config.GOOGLE_PROJECT_ID, location="us-central1")
+
 
 def _get_streamed_response_sync(query: str, resource_name: str) -> str:
     """

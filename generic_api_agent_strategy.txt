@@ -1,0 +1,68 @@
+### **Strategy for a Generic Google Cloud API-Calling Agent**
+
+The goal is to create an agent that can dynamically find, parameterize, and execute any Google Cloud API based on a user's natural language request. This avoids the need to manually create a separate tool for every API call.
+
+The proposed solution is a **multi-agent system** where specialized agents collaborate to fulfill the user's request. This modular approach is more robust, scalable, and easier to maintain than a single, monolithic agent.
+
+Here is the breakdown of the architecture and implementation plan:
+
+#### **1. Proposed Multi-Agent Architecture**
+
+We will create a new sequential workflow orchestrated by the main `root_agent`. This workflow will consist of three specialized sub-agents:
+
+1.  **`API Discovery Agent`**: Identifies the correct Google Cloud API(s) to call based on the user's request.
+2.  **`Parameter Gathering Agent`**: Determines the necessary parameters for the discovered APIs and interactively collects them from the user.
+3.  **`API Execution Agent`**: Takes the validated parameters and dynamically executes the Google Cloud API call.
+
+This workflow ensures a clear separation of concerns, making the system more manageable and extensible.
+
+#### **2. Detailed Agent Breakdown**
+
+**a) API Discovery Agent**
+
+*   **Purpose**: To translate a user's natural language request (e.g., "create a new firewall rule") into a specific, callable Google Cloud API endpoint (e.g., `compute.firewalls.insert`).
+*   **Core Technology**: This agent will be powered by **Retrieval-Augmented Generation (RAG)**.
+*   **Implementation**:
+    1.  **Create a RAG Corpus**: We will create a new RAG corpus containing the official Google Cloud API documentation. Each API endpoint and its documentation will be a separate document in this corpus. This will be your agent's "knowledge base" of all available APIs.
+    2.  **Agent Logic**: When triggered, this agent will take the user's request and use the existing `rag_query` tool to search the API documentation corpus.
+    3.  **Output**: The agent will output a structured list of candidate APIs, which will be saved to the session state for the next agent in the sequence.
+
+**b) Parameter Gathering Agent**
+
+*   **Purpose**: To collect and validate all the necessary parameters for the API that the `API Discovery Agent` identified.
+*   **Core Technology**: This is an LLM-powered conversational agent.
+*   **Implementation**:
+    1.  **Input**: It reads the API endpoint information from the session state.
+    2.  **Parameter Identification**: It will make another call to the RAG corpus to retrieve the specific documentation for the selected API, which lists the required request body and parameters.
+    3.  **Interactive Dialogue**: The agent will then start a conversation with the user, asking for each required parameter one by one (e.g., "What is the name of your new firewall rule?", "Which network should it apply to?").
+    4.  **Validation**: The agent will perform basic validation on the user's input to ensure it's in the correct format.
+    5.  **Output**: Once all parameters are collected and validated, it will save them in a structured format to the session state.
+
+**c) API Execution Agent**
+
+*   **Purpose**: To take the API endpoint and the collected parameters and execute the actual API call.
+*   **Core Technology**: This agent will use a new, generic tool for making dynamic API calls.
+*   **Implementation**:
+    1.  **Create a Generic `execute_google_api` Tool**: This will be a new Python function in your `app/tools` directory. It will use the `google-api-python-client` library, which is designed to dynamically call any Google API using its string name (e.g., `compute.instances.insert`).
+    2.  **Agent Logic**: The agent will read the API endpoint and parameters from the session state and pass them to the `execute_google_api` tool.
+    3.  **Output**: The tool will execute the request and return the result (success or error) to the agent, which will then present it to the user.
+
+#### **3. Step-by-Step Implementation Plan**
+
+1.  **Create the API Knowledge Base**:
+    *   Write a one-time script to download the Google Cloud API documentation.
+    *   Use the existing `create_corpus` and `add_data` tools in your project to create a new corpus named `gcp_api_docs` and populate it with the documentation.
+
+2.  **Develop the Generic API Tool**:
+    *   Create a new file: `app/tools/execute_google_api.py`.
+    *   Inside this file, write the Python function that uses the `google-api-python-client` to make dynamic API calls.
+
+3.  **Define the New Agents**:
+    *   In `app/agent.py`, define three new `LlmAgent` instances: `api_discovery_agent`, `parameter_gathering_agent`, and `api_execution_agent`.
+    *   Write clear and concise instructions for each agent, defining its role and behavior.
+
+4.  **Orchestrate the Workflow**:
+    *   Create a `SequentialAgent` named `generic_api_workflow` that runs the three new agents in the correct order.
+    *   Modify the `root_agent`'s instructions to delegate any requests related to unsupported cloud operations to the `generic_api_workflow` agent.
+
+By following this strategy, you can build a powerful and scalable agent that can interact with the entire suite of Google Cloud services, significantly expanding the capabilities of your FinOpti platform.
