@@ -6,11 +6,11 @@ authors = [
     {name = "Robin Varghese", email = "robin@cloudroaster.com"},
 ]
 dependencies = [
-    "google-adk~=1.8.0",
-    "opentelemetry-exporter-gcp-trace~=1.9.0",
-    "google-cloud-logging~=3.11.4",
-    "google-cloud-aiplatform[evaluation,agent-engines]~=1.106.0",
-    "openai~=1.82.0",
+    "google-adk>=1.19.0",
+    "opentelemetry-exporter-gcp-trace>=1.9.0",
+    "google-cloud-logging>=3.11.4",
+    "google-cloud-aiplatform[evaluation,agent-engines]>=1.106.0",
+    "openai>=1.82.0",
     "toolbox-core",
     "requests",
     "nest-asyncio>=1.6.0",

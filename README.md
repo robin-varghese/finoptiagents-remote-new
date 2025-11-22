@@ -109,3 +109,17 @@ The repository includes a Terraform configuration for the setup of a production 
 ) template for visualizing events being logged in BigQuery. See the "Setup Instructions" tab to getting started.
 
 The application uses OpenTelemetry for comprehensive observability with all events being sent to Google Cloud Trace and Logging for monitoring and to BigQuery for long term storage.
+
+Access the Application Correctly (Browser Change)
+This is the most important step.
+Stop your Python server.
+Restart it: uvicorn main:app --host 0.0.0.0 --port 8000
+In your Chrome browser, go to this specific URL:
+http://localhost:8000
+or
+http://127.0.0.1:8000
+Do NOT use http://0.0.0.0:8000 in the browser.
+Once the page loads, perform a hard refresh one last time to be absolutely sure you have the latest code:
+Windows/Linux: Ctrl + Shift + R
+Mac: Cmd + Shift + R
+By accessing the app via localhost, you provide the secure context needed for the AudioWorklet API to function. Combined with the code changes that prevent crashes, both the audio errors and the WebSocket connection problems should now be resolved.

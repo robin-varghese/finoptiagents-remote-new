@@ -1,0 +1,51 @@
+MCP Server Deployment Summary
+
+Goal: Deploy the `gcloud-mcp` server to Cloud Run to allow a local agent to interact with Google Cloud.
+
+Initial Approach (Incorrect - Python-based MCP):
+1.  Attempted to follow documentation for a Python-based MCP server (`fastmcp`) on Cloud Run.
+2.  Created `mcp-on-cloudrun` directory, `server.py`, `test_server.py`, `Dockerfile`.
+3.  Added `fastmcp` dependency.
+4.  Created `server.py` with `add` and `subtract` tools.
+5.  Created `Dockerfile` for Python application.
+
+Revised Approach (Correct - Node.js-based `gcloud-mcp`):
+
+Steps Completed:
+
+1.  Clarified Technology Stack: Realized `gcloud-mcp` is a Node.js application, not Python.
+2.  Project Setup:
+    *   Created `gcloud-mcp-on-cloudrun` directory.
+    *   Created `server.js`, `package.json`, `Dockerfile` within it.
+3.  `package.json` Configuration:
+    *   Initialized `package.json` with `@google-cloud/gcloud-mcp` as a dependency.
+    *   Added `"type": "module"` to `package.json` to enable ES module syntax.
+    *   Added `express` and `node-fetch` as dependencies.
+4.  `server.js` Implementation:
+    *   Initially attempted to `spawn` `npx @google-cloud/gcloud-mcp` directly.
+    *   Modified `server.js` to use Express.js as a wrapper:
+        *   Listens on `process.env.PORT` and `0.0.0.0`.
+        *   Provides a `/health` endpoint.
+        *   Provides a `/mcp` endpoint that spawns `npx @google-cloud/gcloud-mcp` with `command` and `args` from the request body, capturing stdout/stderr.
+5.  `Dockerfile` Implementation:
+    *   Created a `Dockerfile` using `node:20-slim`.
+    *   Crucially, added steps to install the Google Cloud SDK (apt-get update, install curl, gnupg, add Google Cloud apt repo, install `google-cloud-sdk`).
+    *   Copies `package.json`, runs `npm install`, copies `server.js`, exposes `$PORT`, and sets `CMD ["npm", "start"]`.
+6.  Cloud Run Deployment:
+    *   Successfully deployed the `mcp-server` service to Cloud Run using `gcloud run deploy mcp-server --source ./gcloud-mcp-on-cloudrun --no-allow-unauthenticated --region us-central1`.
+    *   Service URL: `https://mcp-server-912533822336.us-central1.run.app`
+7.  Test Client Setup:
+    *   Created `test_client.js` to test the deployed service.
+    *   Modified `test_client.js` to use `import fetch from 'node-fetch';` (ES module syntax).
+    *   Modified `test_client.js` to connect to `http://localhost:8080` (for use with `gcloud run services proxy`).
+    *   Installed `node-fetch` dependency (`npm install`).
+
+Current Error:
+
+*   `FetchError: request to http://localhost:8080/mcp failed, reason: ECONNREFUSED`
+*   This error occurs when running `node test_client.js`.
+*   Root Cause: The `test_client.js` script is unable to connect to `http://localhost:8080`. This indicates that the `gcloud run services proxy mcp-server --region=us-central1` command is either not running in a separate terminal, or it is failing to establish a local proxy listener on `localhost:8080`.
+
+Next Step Required from User:
+
+*   Provide the exact output from the terminal where you are running (or attempting to run) the `gcloud run services proxy mcp-server --region=us-central1` command. This output is critical to understand why the proxy is not connecting to `localhost:8080`.
