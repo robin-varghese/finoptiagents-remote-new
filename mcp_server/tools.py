@@ -731,11 +731,12 @@ def list_corpora() -> dict:
     """
     try:
         logger.info("Listing all available corpora.")
-        corpora = rag.list_corpora()
-        logger.info(f"Found {len(corpora)} corpora.")
+        corpora_pager = rag.list_corpora()
+        corpora_list = list(corpora_pager)
+        logger.info(f"Found {len(corpora_list)} corpora.")
 
         corpus_info = []
-        for corpus in corpora:
+        for corpus in corpora_list:
             corpus_data = {
                 "resource_name": corpus.name,
                 "display_name": corpus.display_name,
@@ -752,7 +753,7 @@ def list_corpora() -> dict:
             "corpora": corpus_info,
         }
     except Exception as e:
-        logger.error(f"Error listing corpora: {str(e)}")
+        logger.error(f"Error listing corpora: {str(e)}", exc_info=True)
         return {
             "status": "error",
             "message": f"Error listing corpora: {str(e)}",

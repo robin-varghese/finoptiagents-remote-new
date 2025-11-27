@@ -19,8 +19,7 @@ def check_corpus_exists(corpus_name: str, tool_context=None) -> bool:
         True if the corpus exists, False otherwise.
     """
     try:
-        # List all corpora
-        corpora = rag.list_corpora()
+        corpora = list(rag.list_corpora())
         
         # Check if any corpus has the matching display name
         for corpus in corpora:
@@ -43,7 +42,7 @@ def get_corpus_resource_name(corpus_name: str) -> str:
         The resource name of the corpus, or raises ValueError if not found.
     """
     try:
-        corpora = rag.list_corpora()
+        corpora = list(rag.list_corpora())
         for corpus in corpora:
             if corpus.display_name == corpus_name:
                 return corpus.name
