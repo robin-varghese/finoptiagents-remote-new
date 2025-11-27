@@ -9,6 +9,7 @@ All other modules in the application should import their configuration from this
 import os
 import google.auth
 from google.cloud import secretmanager
+from google.cloud import resourcemanager_v3
 import logging
 from google.api_core import exceptions
 import vertexai
@@ -41,7 +42,7 @@ FINOPS_CORPUS_DISPLAY_NAME = "finops_design_documents_corpus"
 
 
 # =======================================================================================
-# 4. Secret Manager Helper Functions
+# 4. Secret Manager and Project Resolution Helper Functions
 # =======================================================================================
 def _get_secret_value(project_id: str, secret_id: str, client: secretmanager.SecretManagerServiceClient) -> str | None:
     """Helper function to fetch a single secret from Secret Manager."""
@@ -60,6 +61,23 @@ def _get_secret_value(project_id: str, secret_id: str, client: secretmanager.Sec
         logging.warning(f"Could not fetch secret '{secret_id}': {e}")
         return None
 
+def _resolve_project_id_from_number(project_number: str) -> str | None:
+    """
+    Given a project number, resolves it to the project ID string.
+    Returns None if resolution fails.
+    """
+    try:
+        logging.info(f"Attempting to resolve project ID from project number: {project_number}...")
+        client = resourcemanager_v3.ProjectsClient()
+        project_path = f"projects/{project_number}"
+        project = client.get_project(name=project_path)
+        project_id = project.project_id
+        logging.info(f"Successfully resolved project number '{project_number}' to project ID: '{project_id}'")
+        return project_id
+    except Exception as e:
+        logging.error(f"Failed to resolve project ID from number '{project_number}': {e}", exc_info=True)
+        return None
+
 
 # =======================================================================================
 # 5. Core Configuration Loading
@@ -68,15 +86,25 @@ print("--- Loading configuration ---")
 _secret_client = secretmanager.SecretManagerServiceClient()
 
 # Determine the Project ID using a robust fallback mechanism
-_initial_project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
-if not _initial_project_id:
+_initial_project_identifier = os.environ.get("GOOGLE_CLOUD_PROJECT")
+if not _initial_project_identifier:
     try:
-        _, _initial_project_id = google.auth.default()
+        _, _initial_project_identifier = google.auth.default()
     except google.auth.exceptions.DefaultCredentialsError:
-        _initial_project_id = None
+        _initial_project_identifier = None
 
 # First, try to get the project ID from a specific secret, otherwise use the discovered one.
-GOOGLE_PROJECT_ID = _get_secret_value(_initial_project_id, "google-project-id", _secret_client) or _initial_project_id
+_project_identifier_from_secret = _get_secret_value(_initial_project_identifier, "google-project-id", _secret_client)
+_final_project_identifier = _project_identifier_from_secret or _initial_project_identifier
+
+
+# If the identifier is a number, resolve it to the project ID string
+if _final_project_identifier and _final_project_identifier.isdigit():
+    logging.info(f"Project identifier '{_final_project_identifier}' appears to be a project number.")
+    GOOGLE_PROJECT_ID = _resolve_project_id_from_number(_final_project_identifier)
+else:
+    GOOGLE_PROJECT_ID = _final_project_identifier
+
 
 if not GOOGLE_PROJECT_ID:
     raise ValueError("FATAL: Could not determine Google Cloud Project ID. Please set GOOGLE_CLOUD_PROJECT or the 'google-project-id' secret.")
@@ -84,6 +112,7 @@ logging.info(f"Using Project ID: {GOOGLE_PROJECT_ID}")
 
 # --- ADDED FOR BACKWARDS COMPATIBILITY ---
 PROJECT_ID = GOOGLE_PROJECT_ID
+
 
 # Helper to fetch other secrets using the now-confirmed Project ID
 def _fetch_config(secret_id: str) -> str | None:
