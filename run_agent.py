@@ -7,7 +7,7 @@ from google.genai import types as genai_types
 
 
 async def main():
-    """Runs the agent with a sample query to send an email."""
+    """Runs the agent with a sample query to delete a VM."""
     session_service = InMemorySessionService()
     await session_service.create_session(
         app_name="app", user_id="test_user", session_id="test_session"
@@ -16,13 +16,13 @@ async def main():
         agent=root_agent, app_name="app", session_service=session_service
     )
     
-    import base64
+    # DANGEROUS: This will delete a VM instance.
+    # Please replace the placeholder values before running.
+    project_id = "<your-project-id>"
+    instance_id = "<your-instance-id>"
+    zone = "<your-zone>"
 
-    html_body = "<h1>Hello from FinOpti Agent!</h1><p>This is a test email.</p>"
-    body_html_base64 = base64.b64encode(html_body.encode('utf-8')).decode('utf-8')
-
-    # Example query to trigger the send_email tool
-    query = f"Please send an email. The recipient is robinkv@gmail.com, the subject is 'Test Email from FinOpti Agent', the sender's name is 'FinOpti Agent', and the base64 encoded HTML body is '{body_html_base64}'."
+    query = f"Please delete the VM instance '{instance_id}' in project '{project_id}' and zone '{zone}'."
 
     async for event in runner.run_async(
         user_id="test_user",
