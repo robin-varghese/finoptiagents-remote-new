@@ -1140,7 +1140,7 @@ Multi-layered defense against harmful content, misalignment, and unsafe actions.
 ADK (especially with Gemini Live API models) supports richer interactions.
 
 *   **Audio**: Input via `Blob(mime_type="audio/pcm", data=bytes)`, Output via `genai_types.SpeechConfig` in `RunConfig`.
-*   **Vision (Images/Video)**: Input via `Blob(mime_type="image/jpeg", data=bytes)` or `Blob(mime_type="video/mp4", data=bytes)`. Models like `gemini-2.5-flash-exp` can process these.
+*   **Vision (Images/Video)**: Input via `Blob(mime_type="image/jpeg", data=bytes)` or `Blob(mime_type="video/mp4", data=bytes)`. Models like `gemini-2.5-flash` can process these.
 *   **Multimodal Input in `Content`**:
     ```python
     multimodal_content = genai_types.Content(

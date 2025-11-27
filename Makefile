@@ -20,9 +20,10 @@ install:
 	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Installing uv..."; curl -LsSf https://astral.sh/uv/install.sh | sh; . "$$HOME/.cargo/env"; }
 	uv pip install -e ".[dev,jupyter]"
 
-# Run the local Streamlit playground
+# Run the local Streamlit playground with unbuffered output for immediate logs
 playground:
-	uv run streamlit run app/playground.py
+	@echo "Starting FinOptiAgents Playground..."
+	@bash -c "source $$(conda info --base)/etc/profile.d/conda.sh && conda activate googleagentdevkit-new-nov-2025 && PYTHONUNBUFFERED=1 streamlit run app/playground.py"
 
 # Deploy to Agent Engine.
 # This first exports the production dependencies to .requirements.txt, which is

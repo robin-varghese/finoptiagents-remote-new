@@ -1,37 +1,57 @@
 import nest_asyncio
 # =======================================================================================
 # ### --- START: COMPLETE AGENT FILE (DEFINITIVE SIMPLIFIED SOLUTION) --- ###
-# =======================================================================================
+# # =======================================================================================
 # 1. --- IMPORTS ---
 import logging
 from typing import Optional
 
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmRequest, LlmResponse
 from google.genai import types
-
-from .tools.delete_vm_instance import delete_vm_instance
-from .tools.list_vm_instances import list_vm_instances
-from .tools.send_email import send_email
-from .tools.generate_chart_from_data import generate_chart_from_data
-from .tools.run_bq_query import run_bq_query
-from .tools.call_cpu_utilization_agent import call_cpu_utilization_agent
 from . import descandinstructions
-
-from google.adk.agents import Agent
-
-from .tools.add_data import add_data
-from .tools.create_corpus import create_corpus
-from .tools.delete_corpus import delete_corpus
-from .tools.delete_document import delete_document
-from .tools.get_corpus_info import get_corpus_info
-from .tools.list_corpora import list_corpora
-from .tools.rag_query import rag_query
 
 logger = logging.getLogger(__name__)
 
-nest_asyncio.apply()
+# --- Direct Tool Imports (Bypassing MCP Subprocess) ---
+# Importing tools directly from mcp_server to avoid Streamlit/asyncio/subprocess compatibility issues
+from mcp_server.tools import (
+    run_bq_query,
+    send_email,
+    list_vm_instances, 
+    delete_vm_instance,
+    generate_chart_from_data,
+    call_cpu_utilization_agent,
+    rag_query,
+    create_corpus,
+    add_data,
+    delete_corpus,
+    delete_document,
+    get_corpus_info,
+    get_corpus_info,
+    list_corpora
+)
+from app.tools.gcloud_mcp_tools import run_gcloud_command
+from app.tools.monitoring_mcp_tools import query_time_series, query_logs, list_metrics
+
+# List of all available tools
+ALL_TOOLS = [
+    run_bq_query,
+    send_email,
+    list_vm_instances,
+    delete_vm_instance,
+    generate_chart_from_data,
+    call_cpu_utilization_agent,
+    rag_query,
+    create_corpus,
+    add_data,
+    delete_corpus,
+    delete_document,
+    get_corpus_info,
+    list_corpora
+]
+
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
     callback_context: CallbackContext, llm_request: LlmRequest
@@ -86,17 +106,33 @@ def simple_before_model_modifier(
 # 6. --- SIMPLIFIED AGENT DEFINITIONS ---
 delete_vm_instance_agent = LlmAgent(
     name="delete_vm_instance_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     description=descandinstructions.delete_vm_instance_desc,
     instruction=descandinstructions.delete_vm_instance_instruction,
-    tools=[list_vm_instances, delete_vm_instance],
+    tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
 )
 
 greeting_agent = LlmAgent(
     name="Greeter",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     description=descandinstructions.greeting_agent_description,
     instruction=descandinstructions.greeting_agent_instruction
+)
+
+gcloud_ops_agent = LlmAgent(
+    name="gcloud_ops_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.gcloud_ops_agent_description,
+    instruction=descandinstructions.gcloud_ops_agent_instruction,
+    tools=[run_gcloud_command]
+)
+
+monitoring_agent = LlmAgent(
+    name="monitoring_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.monitoring_agent_description,
+    instruction=descandinstructions.monitoring_agent_instruction,
+    tools=[query_time_series, query_logs, list_metrics]
 )
 
 # --- The Single, Simplified, and Robust RAG Agent ---
@@ -122,15 +158,7 @@ try:
         # Using Gemini 2.5 Flash for best performance with RAG operations
         model="gemini-2.5-flash",
         description=descandinstructions.rag_agent_description,
-        tools=[
-            rag_query,
-            list_corpora,
-            create_corpus,
-            add_data,
-            get_corpus_info,
-            delete_corpus,
-            delete_document,
-        ],
+        tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
         instruction=descandinstructions.rag_agent_instruction,
     )
 
@@ -142,22 +170,17 @@ try:
         # IMPORTANT: Bidirectional streaming requires a model that supports this feature,
         # often a "Live" or "Express" version. The name below is an example;
         # you must use the specific model name provided for this capability.
-        model="gemini-2.0-flash-exp",
+        model="gemini-2.5-flash",
         description=descandinstructions.root_agent_description,
         instruction=(descandinstructions.root_agent_instruction),
         # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
-        tools=[
-            list_vm_instances,
-            #search_tool,
-            call_cpu_utilization_agent,
-            run_bq_query,
-            generate_chart_from_data,
-            send_email,
-        ],
+        tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
         sub_agents=[
             delete_vm_instance_agent,
             greeting_agent,
             design_compliance_check_rag_agent,
+            gcloud_ops_agent,
+            monitoring_agent,
         ],
         before_model_callback=simple_before_model_modifier,
     )

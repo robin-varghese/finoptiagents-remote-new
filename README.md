@@ -10,15 +10,27 @@ This project is organized as follows:
 ```
 finoptiagents-remote-new/
 ├── app/                 # Core application code
-│   ├── agent.py         # Main agent logic
+│   ├── agent.py         # Main agent logic with direct tool imports
+│   ├── playground.py    # Streamlit UI for local testing
 │   ├── agent_engine_app.py # Agent Engine application logic
 │   └── utils/           # Utility functions and helpers
+├── mcp_server/          # MCP Server and tool implementations
+│   ├── main.py          # FastMCP server (for standalone/external use)
+│   ├── tools.py         # All 13 tool implementations
+│   ├── config.py        # Configuration and Secret Manager integration
+│   └── rag_utils.py     # RAG utility functions
+├── logs/                # Application logs
+│   └── mcp_server.log   # MCP server logs (when running in MCP mode)
 ├── .cloudbuild/         # CI/CD pipeline configurations for Google Cloud Build
 ├── deployment/          # Infrastructure and deployment scripts
 ├── notebooks/           # Jupyter notebooks for prototyping and evaluation
 ├── tests/               # Unit, integration, and load tests
+│   └── mcp_troubleshooting/  # MCP debugging and verification scripts
+├── verify_mcp_connection.py  # Script to test MCP server mode (moved to tests/mcp_troubleshooting/)
 ├── Makefile             # Makefile for common commands
 ├── GEMINI.md            # AI-assisted development guide
+├── MCP_LOGGING.md       # MCP logging guide and best practices
+├── mcp_server_deployment_summary.txt  # MCP architecture documentation
 └── pyproject.toml       # Project dependencies and configuration
 ```
 
@@ -80,6 +92,87 @@ The agent is designed to assist with a wide range of Google Cloud financial oper
 4.  **Monitor:** Track performance and gather insights using Cloud Logging, Tracing, and the Looker Studio dashboard to iterate on your application.
 
 The project includes a `GEMINI.md` file that provides context for AI tools like Gemini CLI when asking questions about your template.
+
+## MCP Architecture (Model Context Protocol)
+
+This project uses a **hybrid tool architecture** combining direct imports and MCP server capabilities.
+
+### Tool Organization
+
+All 13 tools are defined in `mcp_server/tools.py`:
+- `run_bq_query` - Execute BigQuery queries
+- `send_email` - Send emails via Cloud Function
+- `list_vm_instances` - List GCP VMs
+- `delete_vm_instance` - Delete GCP VMs
+- `generate_chart_from_data` - Create visualizations
+- `call_cpu_utilization_agent` - Call remote Vertex AI agent
+- RAG tools: `rag_query`, `create_corpus`, `add_data`, `delete_corpus`, `delete_document`, `get_corpus_info`, `list_corpora`
+
+### Dual-Mode Architecture
+
+#### Streamlit UI (Production)
+**Mode:** Direct Python imports  
+**Implementation:** Tools imported directly in `app/agent.py`
+
+```python
+from mcp_server.tools import run_bq_query, send_email, list_vm_instances, ...
+ALL_TOOLS = [run_bq_query, send_email, ...]  # Used by agents
+```
+
+**Why?** Streamlit's event loop conflicts with MCP subprocess stdio communication. Direct imports provide immediate, reliable access to tools.
+
+#### Standalone/External Clients
+**Mode:** MCP Server subprocess  
+**Implementation:** FastMCP server in `mcp_server/main.py`
+
+```bash
+# Test MCP server mode
+conda run -n googleagentdevkit-new-nov-2025 python tests/mcp_troubleshooting/verify_mcp_connection.py
+```
+
+**Use Cases:**
+- Testing tool functionality in isolation
+- External MCP clients
+- Future non-Streamlit deployments
+
+### Key Files
+
+- **`mcp_server/tools.py`** - All tool implementations (13 tools)
+- **`mcp_server/main.py`** - FastMCP server (for standalone use)
+- **`mcp_server/config.py`** - Configuration and Secret Manager integration
+- **`app/agent.py`** - Agent definitions with direct tool imports
+- **`tests/mcp_troubleshooting/`** - MCP debugging and verification scripts
+- **`MCP_LOGGING.md`** - Logging guide for both modes
+- **`mcp_server_deployment_summary.txt`** - Complete architecture documentation
+
+### Adding New Tools
+
+1. Define the tool in `mcp_server/tools.py`:
+```python
+@mcp.tool()
+def my_new_tool(param: str) -> str:
+    """Tool description for LLM."""
+    logger.info(f"[TOOL CALL] my_new_tool - Starting")
+    # Implementation
+    return result
+```
+
+2. Import in `app/agent.py`:
+```python
+from mcp_server.tools import my_new_tool
+ALL_TOOLS = [..., my_new_tool]  # Add to list
+```
+
+3. Tool is now available in both Streamlit UI and MCP server mode.
+
+### Logging
+
+- **Streamlit UI:** Logs appear in terminal where `make playground` runs
+- **MCP Server:** File-based logs in `logs/mcp_server.log` (view with `tail -f logs/mcp_server.log`)
+
+**Important:** Never use `print()` in tool code or add `logging.StreamHandler()` when running MCP server (corrupts stdio protocol).
+
+For complete details, see `MCP_LOGGING.md` and `mcp_server_deployment_summary.txt`.
 
 
 ## Deployment

@@ -8,6 +8,36 @@ import json
 import plotly.graph_objects as go
 import re
 import logging
+import traceback
+import nest_asyncio
+import warnings
+
+# Suppress the AsyncClient.aclose() warning from google.genai
+# This is a known issue with the ADK's internal async client management
+warnings.filterwarnings("ignore", message="coroutine 'AsyncClient.aclose' was never awaited")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*AsyncClient.aclose.*")
+
+# Configure logging to display tool execution logs
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Output to console
+    ]
+)
+
+# Enable logging for tool modules
+logging.getLogger('mcp_server.tools').setLevel(logging.INFO)
+logging.getLogger('app.agent').setLevel(logging.INFO)
+logging.getLogger('google.adk').setLevel(logging.INFO)
+
+nest_asyncio.apply()
+
+# Verify logging is working
+logger = logging.getLogger(__name__)
+logger.info("=" * 80)
+logger.info("🚀 FinOptiAgents Playground Starting...")
+logger.info("=" * 80)
 
 # --- Custom CSS for Chat Bubbles ---
 st.markdown("""
@@ -62,9 +92,9 @@ sample_prompts = {
     "Engineering Manager / Team Lead": [
         "who are the stakeholders of these projects",
         "who are managing the good projects in-terms of compliance.",
-        "can you list all the GCP projects running in the project vector-search-poc in zone us-centrall-a",
+        "can you list all the GCP VMs/CPUs running in the project vector-search-poc in zone us-central1-a",
         "can you check the CPU utilisation for this virtual machine",
-        "can you delete the under utilised CPU from cloud. project name : vector-search-poc zone:us-centrall-a",
+        "can you delete the under utilised CPU from cloud. project name : vector-search-poc zone:us-central1-a",
     ],
     "Compliance / Audit Team": [
         "so how many vms were deleted today",
@@ -75,6 +105,10 @@ sample_prompts = {
         "can you check whether Robin Varghese has deleted any VMs",
         "when did Robin Varghese delete the VMs",
     ],
+    "Admin": [
+        "Create a new Vertex AI RAG corpus with the specified name finoptiagents_design_docs_rag using the docs in Google Cloud Storage gs://finoptiagent-earb-designdocument2",
+        "Delete the Vertex AI RAG corpus with the specified name finoptiagents_design_docs_rag",
+    ]
 }
 
 def get_or_create_eventloop():
@@ -214,9 +248,26 @@ if prompt:
                 
                 return response_text
 
-            loop = get_or_create_eventloop()
-            # In playground.py
-            final_response = loop.run_until_complete(run_agent_and_get_final_response(user_message))
+            # Use asyncio.run() for robust event loop management
+            # If a loop is already running (e.g. Streamlit internal loop), asyncio.run will fail.
+            # In that case, we fall back to creating a task or running in the existing loop.
+            try:
+                final_response = asyncio.run(run_agent_and_get_final_response(user_message))
+            except RuntimeError as e:
+                if "asyncio.run() cannot be called from a running event loop" in str(e):
+                    # Fallback: We are already in a loop.
+                    # Since we removed nest_asyncio, we can't use loop.run_until_complete re-entrantly.
+                    # But we can try to await it if we were async... but we are not.
+                    # We must use a new thread to run a fresh loop if we are blocked.
+                    # OR, we can try to get the current loop and use it? No, run_until_complete fails if running.
+                    # The only safe way in a running loop (without nest_asyncio) is to spawn a thread.
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, run_agent_and_get_final_response(user_message))
+                        final_response = future.result()
+                else:
+                    raise e
+            
             logging.info(f"Agent returned final response.")
             thinking_placeholder.empty()
             
@@ -262,7 +313,7 @@ if prompt:
         # This `except` block corresponds to the main `try` at the top
         except Exception as e:
             logging.error(f"An error occurred during agent execution: {e}", exc_info=True)
-            st.error(f"An error occurred: {e}")
+            st.error(f"An error occurred: {e}\n\nTraceback:\n```\n{traceback.format_exc()}\n```")
             final_content_to_store = f"Sorry, an error occurred: {e}"
         # --- END OF FIX ---
     

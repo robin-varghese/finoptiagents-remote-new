@@ -1,0 +1,19 @@
+[project]
+name = "finoptiagents-mcp-server"
+version = "0.1.0"
+description = "MCP Server for FinOptiAgents"
+dependencies = [
+    "mcp[cli]",
+    "google-cloud-bigquery",
+    "google-cloud-compute",
+    "google-cloud-aiplatform",
+    "requests",
+    "google-adk>=1.19.0", # For ToolContext compatibility if needed
+    "google-genai",
+    "pandas",
+    "plotly",
+    "google-cloud-storage",
+    "google-auth",
+    "google-cloud-secret-manager"
+]
+requires-python = ">=3.10"

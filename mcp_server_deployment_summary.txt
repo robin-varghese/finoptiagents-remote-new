@@ -1,51 +1,130 @@
-MCP Server Deployment Summary
+# MCP Server Deployment Summary
+Date: 2025-11-23
+Status: ✅ OPERATIONAL (Direct Import Mode for Streamlit)
 
-Goal: Deploy the `gcloud-mcp` server to Cloud Run to allow a local agent to interact with Google Cloud.
+## 1. Deployment Overview
 
-Initial Approach (Incorrect - Python-based MCP):
-1.  Attempted to follow documentation for a Python-based MCP server (`fastmcp`) on Cloud Run.
-2.  Created `mcp-on-cloudrun` directory, `server.py`, `test_server.py`, `Dockerfile`.
-3.  Added `fastmcp` dependency.
-4.  Created `server.py` with `add` and `subtract` tools.
-5.  Created `Dockerfile` for Python application.
+The FinOptiAgents application uses a dual-mode tool architecture:
 
-Revised Approach (Correct - Node.js-based `gcloud-mcp`):
+### Streamlit UI (Production)
+- **Mode:** Direct Python imports from `mcp_server/tools.py`
+- **Reason:** Streamlit's event loop conflicts with MCP subprocess stdio communication
+- **Implementation:** Tools imported directly in `app/agent.py` as `ALL_TOOLS` list
+- **Status:** ✅ Working reliably
 
-Steps Completed:
+### Standalone/External Clients
+- **Mode:** MCP Server subprocess via stdio
+- **Implementation:** `mcp_server/main.py` running as FastMCP server
+- **Use Cases:** `verify_mcp_connection.py`, external MCP clients, testing
+- **Status:** ✅ Working (verified with test scripts)
 
-1.  Clarified Technology Stack: Realized `gcloud-mcp` is a Node.js application, not Python.
-2.  Project Setup:
-    *   Created `gcloud-mcp-on-cloudrun` directory.
-    *   Created `server.js`, `package.json`, `Dockerfile` within it.
-3.  `package.json` Configuration:
-    *   Initialized `package.json` with `@google-cloud/gcloud-mcp` as a dependency.
-    *   Added `"type": "module"` to `package.json` to enable ES module syntax.
-    *   Added `express` and `node-fetch` as dependencies.
-4.  `server.js` Implementation:
-    *   Initially attempted to `spawn` `npx @google-cloud/gcloud-mcp` directly.
-    *   Modified `server.js` to use Express.js as a wrapper:
-        *   Listens on `process.env.PORT` and `0.0.0.0`.
-        *   Provides a `/health` endpoint.
-        *   Provides a `/mcp` endpoint that spawns `npx @google-cloud/gcloud-mcp` with `command` and `args` from the request body, capturing stdout/stderr.
-5.  `Dockerfile` Implementation:
-    *   Created a `Dockerfile` using `node:20-slim`.
-    *   Crucially, added steps to install the Google Cloud SDK (apt-get update, install curl, gnupg, add Google Cloud apt repo, install `google-cloud-sdk`).
-    *   Copies `package.json`, runs `npm install`, copies `server.js`, exposes `$PORT`, and sets `CMD ["npm", "start"]`.
-6.  Cloud Run Deployment:
-    *   Successfully deployed the `mcp-server` service to Cloud Run using `gcloud run deploy mcp-server --source ./gcloud-mcp-on-cloudrun --no-allow-unauthenticated --region us-central1`.
-    *   Service URL: `https://mcp-server-912533822336.us-central1.run.app`
-7.  Test Client Setup:
-    *   Created `test_client.js` to test the deployed service.
-    *   Modified `test_client.js` to use `import fetch from 'node-fetch';` (ES module syntax).
-    *   Modified `test_client.js` to connect to `http://localhost:8080` (for use with `gcloud run services proxy`).
-    *   Installed `node-fetch` dependency (`npm install`).
+## 2. Architecture Decision
 
-Current Error:
+### Why Direct Imports for Streamlit?
 
-*   `FetchError: request to http://localhost:8080/mcp failed, reason: ECONNREFUSED`
-*   This error occurs when running `node test_client.js`.
-*   Root Cause: The `test_client.js` script is unable to connect to `http://localhost:8080`. This indicates that the `gcloud run services proxy mcp-server --region=us-central1` command is either not running in a separate terminal, or it is failing to establish a local proxy listener on `localhost:8080`.
+After extensive troubleshooting, the MCP subprocess approach proved incompatible with Streamlit due to:
 
-Next Step Required from User:
+1. **Event Loop Conflicts:** Streamlit's internal asyncio loop + nest_asyncio patches + anyio subprocess management created deadlocks
+2. **Stdio Interference:** Timeout errors despite server processing requests (response lost in pipe)
+3. **Complexity:** 135+ lines of monkeypatches couldn't resolve the fundamental incompatibility
 
-*   Provide the exact output from the terminal where you are running (or attempting to run) the `gcloud run services proxy mcp-server --region=us-central1` command. This output is critical to understand why the proxy is not connecting to `localhost:8080`.
+### Solution: Hybrid Approach
+
+- **Streamlit UI:** Import tools directly from `mcp_server/tools.py` (bypasses subprocess)
+- **MCP Server:** Remains available for non-Streamlit use cases
+- **Benefit:** Same tools, same code, different transport layer
+
+## 3. Available Tools (13 Total)
+
+All tools are defined in `mcp_server/tools.py` and work in both modes:
+
+1.  `run_bq_query` - Execute BigQuery queries
+2.  `send_email` - Send emails via Cloud Function
+3.  `list_vm_instances` - List GCP VMs (✅ verified live)
+4.  `delete_vm_instance` - Delete GCP VMs
+5.  `generate_chart_from_data` - Create visualizations
+6.  `call_cpu_utilization_agent` - Call remote Vertex AI agent
+7.  `rag_query` - Query RAG corpus
+8.  `create_corpus` - Create new RAG corpus
+9.  `add_data` - Add documents to corpus
+10. `delete_corpus` - Delete RAG corpus
+11. `delete_document` - Delete document from corpus
+12. `get_corpus_info` - Get corpus metadata
+13. `list_corpora` - List all RAG corpora
+
+## 4. Streamlit Integration (app/agent.py)
+
+```python
+# Direct imports (no subprocess)
+from mcp_server.tools import (
+    run_bq_query,
+    send_email,
+    list_vm_instances,
+    # ... all 13 tools
+)
+
+ALL_TOOLS = [run_bq_query, send_email, ...]  # List of functions
+
+# Agents use the direct list
+root_agent = LlmAgent(
+    tools=ALL_TOOLS,  # Direct function references
+    # ...
+)
+```
+
+## 5. MCP Server Standalone Use
+
+### Running the Verification Script
+```bash
+conda run -n googleagentdevkit-new-nov-2025 python verify_mcp_connection.py
+```
+
+This script:
+- Launches MCP server as subprocess
+- Applies necessary timeout patches
+- Lists all tools
+- Executes `list_vm_instances` with test inputs
+
+### Monitoring MCP Server
+```bash
+tail -f logs/mcp_server.log
+```
+
+Logs show:
+- Server initialization
+- Secret Manager fetches
+- Vertex AI setup
+- Tool requests/responses
+
+## 6. Troubleshooting
+
+### If Streamlit UI Fails
+1. Check `app/agent.py` imports are correct
+2. Verify `mcp_server/tools.py` has all tool definitions
+3. Check `mcp_server/config.py` for environment setup
+
+### If MCP Server Fails (Standalone)
+1. Check `logs/mcp_server.log` for errors
+2. Verify Python environment: `conda activate googleagentdevkit-new-nov-2025`
+3. Run verification script to isolate issue
+
+### Common Errors
+- **ImportError:** Ensure `mcp_server/` is in PYTHONPATH
+- **Secret Manager failures:** Check GCP credentials and project ID
+- **Vertex AI errors:** Verify region and API enablement
+
+## 7. Key Files
+
+- `app/agent.py` - Agent definitions with direct tool imports
+- `mcp_server/tools.py` - All 13 tool implementations
+- `mcp_server/main.py` - FastMCP server (for standalone use)
+- `mcp_server/config.py` - Configuration and initialization
+- `verify_mcp_connection.py` - Test script for MCP mode
+- `logs/mcp_server.log` - File-based logs (no console output)
+
+## 8. Next Steps
+
+- ✅ Playground is working with direct imports
+- ✅ All tools verified
+- MCP server remains available for future non-Streamlit deployments
+- Consider HTTP-based MCP transport for production if subprocess is needed
