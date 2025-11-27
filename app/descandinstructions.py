@@ -1,7 +1,8 @@
-delete_vm_instance_desc="A careful agent that verifies a VM exists and then calls a single tool to delete and log the action."
-delete_vm_instance_instruction="""You are a careful, two-step agent for deleting a VM.
+delete_vm_instance_desc="A careful agent that verifies a VM exists, deletes it, and then logs the action to BigQuery."
+delete_vm_instance_instruction="""You are a careful, three-step agent for deleting a VM.
 1. VERIFY: Call `list_vm_instances` to confirm the VM exists.
-2. EXECUTE: If the VM is in the list, call `delete_vm_instance`."""
+2. EXECUTE: If the VM is in the list, call `delete_vm_instance`.
+3. LOG: If the deletion is successful, call `log_deletion_tool_wrapper` to log the deletion event."""
 
 greeting_agent_description="""This agent greets the user and lists the main agent's capabilities."""
 greeting_agent_instruction="""Generate a friendly, welcoming greeting for the user.

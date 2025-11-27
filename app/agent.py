@@ -34,6 +34,7 @@ from mcp_server.tools import (
 )
 from app.tools.gcloud_mcp_tools import run_gcloud_command
 from app.tools.monitoring_mcp_tools import query_time_series, query_logs, list_metrics
+from app.tools.log_deletion import log_deletion_tool
 
 # List of all available tools
 ALL_TOOLS = [
@@ -51,6 +52,8 @@ ALL_TOOLS = [
     get_corpus_info,
     list_corpora
 ]
+
+DELETE_VM_TOOLS = ALL_TOOLS + [log_deletion_tool]
 
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
@@ -109,7 +112,7 @@ delete_vm_instance_agent = LlmAgent(
     model="gemini-2.5-flash",
     description=descandinstructions.delete_vm_instance_desc,
     instruction=descandinstructions.delete_vm_instance_instruction,
-    tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
+    tools=DELETE_VM_TOOLS,
 )
 
 greeting_agent = LlmAgent(
