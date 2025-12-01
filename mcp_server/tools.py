@@ -4,7 +4,10 @@ import time
 import asyncio
 import re
 import traceback
-from typing import List, Optional, Dict, Any, Union
+import base64
+import binascii
+from typing import Any, Dict, List, Optional
+
 
 import requests
 import pandas as pd
@@ -106,41 +109,103 @@ def run_bq_query(query: str) -> str:
         return json.dumps({"error": f"An error occurred while running the query: {str(e)}"})
 
 @mcp.tool()
-def send_email(to_address: str, subject: str, user_name: str, body_html_base64: str) -> dict:
+
+def send_email(to_address: str, subject: str, user_name: str = "FinOptiAgents", body_html_base64: Optional[str] = None) -> dict:
+
     """Sends an email to the specified recipient.
 
+
+
     Args:
+
         to_address (str): The recipient's email address.
+
         subject (str): The subject of the email.
-        user_name (str): The name of the user sending the email.
-        body_html_base64 (str): The HTML body of the email, base64 encoded.
+
+        user_name (str): The name of the user sending the email. Defaults to "FinOptiAgents".
+
+        body_html_base64 (str, optional): The content for the email body. It will be treated as plain text
+
+                                          and converted to base64 encoded HTML. Defaults to None.
+
+                                          If not provided, a simple body will be generated from the subject.
+
+
 
     Returns:
+
         dict: A dictionary containing the status and message from the email service.
+
     """
+
     # tool_context is unused in the original implementation, so we drop it from args
+
     logger.info(f"[TOOL CALL] send_email - Starting execution")
-    logger.info(f"[TOOL INPUT] to={to_address}, subject='{subject}'")
+
+    logger.info(f"[TOOL INPUT] to={to_address}, subject='{subject}', user_name='{user_name}', body_provided={body_html_base64 is not None}")
+
+
+
+    body_to_send = body_html_base64
+
+    if body_to_send:
+
+        # Assume it's plain text/HTML that needs encoding.
+
+        html_body = "<html><body>" + body_to_send.replace('\n', '<br>') + "</body></html>"
+
+        body_to_send = base64.b64encode(html_body.encode('utf-8')).decode('utf-8')
+
+    else:
+
+        # Create a simple HTML body from the subject and base64 encode it
+
+        html_body = f"<html><body><p>{subject}</p></body></html>"
+
+        body_to_send = base64.b64encode(html_body.encode('utf-8')).decode('utf-8')
+
+
+
     headers = {'Content-Type': 'application/json'}
+
     data = {
+
         'to_address': to_address,
+
         'subject': subject,
+
         'user_name': user_name,
-        'body_html_base64': body_html_base64
+
+        'body_html_base64': body_to_send
+
     }
+
     url = "https://email-agent-backend-912533822336.us-central1.run.app/send-email"
 
+
+
     try:
+
         response = requests.post(url, headers=headers, data=json.dumps(data))
+
         response.raise_for_status()  # Raise an exception for HTTP errors
+
         result = response.json()
+
         logger.info(f"[TOOL RESPONSE] send_email - Success: {result.get('status', 'unknown')}")
+
         return result
+
     except requests.exceptions.RequestException as e:
+
         logging.error(f"Failed to send email to {to_address}. Error: {e}", exc_info=True)
+
         return {"status": "error", "message": f"Failed to send email: {str(e)}"}
+
     except Exception as e:
+
         logging.error(f"Unexpected error in send_email tool: {e}", exc_info=True)
+
         return {"status": "error", "message": f"Unexpected error: {str(e)}"}
 
 @mcp.tool()

@@ -88,6 +88,7 @@ sample_prompts = {
         "which are the projects having lower environments but doesn\'t have any tickets for release (change request or defects)",
         "can you generate a graph to send to my manager to show the cloud spend for every project",
         "Please review the design document with EARB for the projects and check which are projects deviated during the implementation in-terms of Cloud resources",
+        "review design document for project Alpha by comparing it with gs://finoptiagent-earb-designdocument2/Google Cloud Well-Architected Framework  _  Cloud Architecture Center  _  Google Cloud Documentation.pdf (in design document corpus) and let me know the gaps in the design document",
     ],
     "Engineering Manager / Team Lead": [
         "who are the stakeholders of these projects",

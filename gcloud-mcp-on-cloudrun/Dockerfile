@@ -2,6 +2,10 @@ FROM node:20-slim
 
 WORKDIR /app
 
+ENV NPM_CONFIG_LOGLEVEL=silent
+
+# Set entrypoint to run MCP server directly
+
 # Install Google Cloud SDK
 RUN apt-get update && apt-get install -y \
     apt-transport-https \
