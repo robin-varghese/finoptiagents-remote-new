@@ -31,6 +31,7 @@ mcp = FastMCP("FinOptiAgents Tools")
 
 # Configure logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Mock ToolContext for migration compatibility
 class ToolContext:
@@ -48,16 +49,37 @@ def get_tool_context() -> ToolContext:
 @mcp.tool()
 def run_bq_query(query: str) -> str:
     """
-    Executes a read-only BigQuery SQL query against the configured GCP project and returns the results.
+    Executes a read-only BigQuery SQL query and returns the results.
 
+    **CRITICAL WORKFLOW: Auditing VM Deletion History**
+    To answer questions about past VM deletions (e.g., "who deleted what and when"), you MUST use this tool to query the `vector-search-poc.finops_agent_logs.vm_deletion_log` table.
+
+    **CRITICAL SCHEMA & DATA FORMAT for `vm_deletion_log`:**
+    - The ONLY column with deletion details is `log_data` (Type: JSON).
+    - **MANDATORY DATA NOTE:** The `log_data` column is a JSON string that contains *another* JSON string. You MUST double-parse it.
+
+    **MANDATORY SQL BEST PRACTICES for `vm_deletion_log`:**
+
+    1.  **JSON EXTRACTION (NON-NEGOTIABLE RULE):** You MUST use this exact two-step pattern to get any value from the `log_data` column:
+        `JSON_EXTRACT_SCALAR(PARSE_JSON(JSON_EXTRACT_SCALAR(log_data, '$')), '$.key_name')`
+        Replace `key_name` with the actual key you need (e.g., `user_id`, `deletion_timestamp_utc`).
+
+    2.  **TIMESTAMP HANDLING (NON-NEGOTIABLE RULE):** The timestamp is inside the JSON and is called `deletion_timestamp_utc`. To query it, you MUST use the full pattern below.
+        **THE ONLY CORRECT WAY TO QUERY BY DATE IS:**
+        `WHERE DATE(SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', JSON_EXTRACT_SCALAR(PARSE_JSON(JSON_EXTRACT_SCALAR(log_data, '$')), '$.deletion_timestamp_utc'))) = 'YYYY-MM-DD'`
+
+    **EXAMPLE QUERY for "how many vms were deleted today":**
+    ```sql
+    SELECT COUNT(*) as deleted_vm_count FROM `vector-search-poc.finops_agent_logs.vm_deletion_log` WHERE DATE(SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', JSON_EXTRACT_SCALAR(PARSE_JSON(JSON_EXTRACT_SCALAR(log_data, '$')), '$.deletion_timestamp_utc'))) = CURRENT_DATE()
+    ```
+
+    **General BigQuery Instructions:**
     This is your primary tool for understanding the state of the cloud environment.
     You do NOT need to specify a project_id; the tool runs in the correct project automatically.
     All the table attributes are set with descriptions. So chech the description of columns to identify the correct columns and make correct queries.
 
     The table names in your query, like `finoptiagents.finops_cost_usage`, already contain the dataset.
-    ***For exclusive requets on VM Deletion Logs
-    Route the requests specific for VM deletion scenarion to table finops_agent_logs.vm_deletion_log
-    ***
+    
     For any other queries use the following ables in vector-search-poc.finoptiagents dataset
     1. project_information_master: Core project details. This is the central registry of all projects. 
     Use it to find project names, owners, and IDs. The stakeholder details are mentioned in this table, product_owner_name, business_service_owner_name

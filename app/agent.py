@@ -11,6 +11,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmRequest, LlmResponse
 from google.genai import types
 from . import descandinstructions
+from . import schemas
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,108 @@ def simple_before_model_modifier(
 
 #*************************END: Call Back *****************************************
 
+# =============================================================================
+# FinOps Specialist Agents (Granular Architecture)
+# =============================================================================
+
+# --- Budget Variance Agent ---
+budget_variance_agent = LlmAgent(
+    name="budget_variance_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.budget_variance_agent_description,
+    instruction=descandinstructions.budget_variance_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.BudgetVarianceResult,
+)
+
+# --- Compliance Auditor Agent ---
+compliance_auditor_agent = LlmAgent(
+    name="compliance_auditor_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.compliance_auditor_agent_description,
+    instruction=descandinstructions.compliance_auditor_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.ComplianceResult,
+)
+
+# --- Utilization Analyst Agent ---
+utilization_analyst_agent = LlmAgent(
+    name="utilization_analyst_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.utilization_analyst_agent_description,
+    instruction=descandinstructions.utilization_analyst_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.UtilizationResult,
+)
+
+# --- Optimization Scout Agent (BigQuery-based) ---
+optimization_scout_agent = LlmAgent(
+    name="optimization_scout_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.optimization_scout_agent_description,
+    instruction=descandinstructions.optimization_scout_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.OptimizationResult,
+)
+
+# --- Environment Readiness Agent ---
+environment_readiness_agent = LlmAgent(
+    name="environment_readiness_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.environment_readiness_agent_description,
+    instruction=descandinstructions.environment_readiness_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.ReadinessResult,
+)
+
+# --- GCloud Recommender Agent (NEW) ---
+gcloud_recommender_agent = LlmAgent(
+    name="gcloud_recommender_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.gcloud_recommender_agent_description,
+    instruction=descandinstructions.gcloud_recommender_agent_instruction,
+    tools=[run_gcloud_command]
+)
+
+# --- FinOps Analytics Manager (Coordinates all specialists) ---
+finops_analytics_manager = LlmAgent(
+    name="finops_analytics_manager",
+    model="gemini-2.5-flash",  # Using Pro for better aggregation capabilities
+    description=descandinstructions.finops_analytics_manager_description,
+    instruction=descandinstructions.finops_analytics_manager_instruction,
+    sub_agents=[
+        budget_variance_agent,
+        compliance_auditor_agent,
+        utilization_analyst_agent,
+        optimization_scout_agent,
+        environment_readiness_agent,
+    ],
+    output_schema=schemas.FinOpsHealthReport,
+)
+
+# --- Escalation Agent (Converts findings to actions) ---
+escalation_agent = LlmAgent(
+    name="escalation_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.escalation_agent_description,
+    instruction=descandinstructions.escalation_agent_instruction,
+    tools=[send_email],  # ServiceNow integration to be added later
+)
+
+# --- VM Deletion Auditor Agent (Compliance & Security) ---
+vm_deletion_auditor_agent = LlmAgent(
+    name="vm_deletion_auditor_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.vm_deletion_auditor_agent_description,
+    instruction=descandinstructions.vm_deletion_auditor_agent_instruction,
+    tools=[run_bq_query],
+    output_schema=schemas.VmDeletionAuditResult,
+)
+
+# =============================================================================
+# Existing Agents (Retained from previous architecture)
+# =============================================================================
+
 # 6. --- SIMPLIFIED AGENT DEFINITIONS ---
 delete_vm_instance_agent = LlmAgent(
     name="delete_vm_instance_agent",
@@ -179,11 +282,19 @@ try:
         # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
         tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
         sub_agents=[
+            # FinOps Manager (for bulk operations and routes to specialists internally)
+            finops_analytics_manager,
+            # Action agents
+            escalation_agent,
+            # Compliance agents
+            vm_deletion_auditor_agent,
+            # Existing agents
             delete_vm_instance_agent,
             greeting_agent,
             design_compliance_check_rag_agent,
             gcloud_ops_agent,
             monitoring_agent,
+            gcloud_recommender_agent, # Added the new agent
         ],
         before_model_callback=simple_before_model_modifier,
     )

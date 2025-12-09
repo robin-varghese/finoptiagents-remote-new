@@ -252,6 +252,55 @@ gcloud> upgrade instance-1 to next bigger server
    Try: 'list all vms' to see zones.
 ```
 
+**Cost Optimization & Recommender Commands:**
+
+The interactive client supports all `gcloud recommender` commands for cost optimization:
+
+```
+gcloud> idle IP addresses
+gcloud> idle IP addresses in europe-west2
+gcloud> rightsizing recommendations for zone us-central1-a
+gcloud> find idle cloud sql instances
+gcloud> show idle disks
+```
+
+**Common Cost Recommenders:**
+
+| Query | Recommender ID | Finds |
+|-------|----------------|-------|
+| `idle VMs` | `google.compute.instance.IdleResourceRecommender` | Underutilized VMs |
+| `idle IP addresses` | `google.compute.address.IdleResourceRecommender` | Unused static IPs |
+| `idle disks` | `google.compute.disk.IdleResourceRecommender` | Unattached disks |
+| `rightsizing recommendations` | `google.compute.instance.MachineTypeRecommender` | VM size optimization |
+| `idle cloud sql` | `google.cloudsql.instance.IdleRecommender` | Underutilized databases |
+
+> **Important**: Some recommenders like idle IP addresses are location-specific. If `--location=global` returns empty, specify the region (e.g., `europe-west2`).
+
+**Prerequisites for Recommender Commands:**
+```bash
+# Enable the Recommender API (one-time)
+gcloud services enable recommender.googleapis.com
+
+# Grant viewer permissions (one-time)
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="user:YOUR_EMAIL" \
+  --role="roles/recommender.viewer"
+```
+
+**Comprehensive Cost Scan Script:**
+
+For a complete view of all cost optimization opportunities across all regions:
+```bash
+python get_cost_recommendations.py
+```
+
+This helper script:
+- ✅ Queries all recommenders (VMs, IPs, disks, Cloud SQL, etc.)
+- ✅ Checks multiple regions automatically
+- ✅ Calculates total monthly savings potential
+- ✅ Shows detailed resource-level breakdown
+
+
 #### How It Works
 1. **Gemini Translation**: Your natural language request is sent to Gemini (2.5 Flash)
 2. **Command Generation**: Gemini generates valid gcloud command arguments

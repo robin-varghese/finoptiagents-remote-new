@@ -210,7 +210,7 @@ This is the most reliable way to make an LLM produce predictable, parseable JSON
     ```python
     research_evaluator = LlmAgent(
         name="research_evaluator",
-        model="gemini-2.5-pro",
+        model="gemini-2.5-flash",
         instruction="""You are a meticulous quality assurance analyst. Evaluate the research findings in 'section_research_findings' and be very critical.
         If you find significant gaps, assign a grade of 'fail', write a detailed comment, and generate 5-7 specific follow-up queries.
         If the research is thorough, grade it 'pass'.
@@ -286,7 +286,7 @@ plan_generator = LlmAgent(
 This agent's `instruction` relies on data placed in `session.state` by previous agents.
 ```python
 report_composer = LlmAgent(
-    model="gemini-2.5-pro",
+    model="gemini-2.5-flash",
     name="report_composer_with_citations",
     include_contents="none", # History not needed; all data is injected.
     description="Transforms research data and a markdown outline into a final, cited report.",
@@ -612,12 +612,12 @@ ADK's model flexibility allows integrating various LLMs for different needs.
 *   **AI Studio (Easy Start)**:
     *   Set `GOOGLE_API_KEY="YOUR_API_KEY"` (environment variable).
     *   Set `GOOGLE_GENAI_USE_VERTEXAI="False"`.
-    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-pro"`, etc.
+    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-flash"`, etc.
 *   **Vertex AI (Production)**:
     *   Authenticate via `gcloud auth application-default login` (recommended).
     *   Set `GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"`, `GOOGLE_CLOUD_LOCATION="your-region"` (environment variables).
     *   Set `GOOGLE_GENAI_USE_VERTEXAI="True"`.
-    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-pro"`, or full Vertex AI endpoint resource names for specific deployments.
+    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-flash"`, or full Vertex AI endpoint resource names for specific deployments.
 
 ### 6.2 Other Cloud & Proprietary Models via LiteLLM
 
@@ -1518,7 +1518,7 @@ Before finalizing any `new_string` for a `replace` operation, meticulously verif
     *   **Avoid `make playground`** unless specifically instructed; it is designed for human interaction. Focus on programmatic testing.
 
 *   **Model Selection:**
-    *   **When using Gemini, prefer the 2.5 model family** for optimal performance and capabilities: "gemini-2.5-pro" and "gemini-2.5-flash"
+    *   **When using Gemini, prefer the 2.5 model family** for optimal performance and capabilities: "gemini-2.5-flash" and "gemini-2.5-flash"
 
 *   **Running Python Commands:**
     *   Always use `uv` to execute Python commands within this repository (e.g., `uv run run_agent.py`).

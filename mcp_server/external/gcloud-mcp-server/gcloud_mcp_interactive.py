@@ -49,8 +49,8 @@ def translate_to_gcloud(prompt: str) -> str:
         
         Rules:
         1. Return ONLY the command arguments (exclude 'gcloud' prefix).
-        2. If the user input is already a valid command (starts with known gcloud groups like 'compute', 'projects', 'storage'), return it as is.
-        3. Ensure flags are correct (e.g., --project, --zone).
+        2. If the user input is already a valid command (starts with known gcloud groups like 'compute', 'projects', 'storage', 'recommender'), return it as is.
+        3. Ensure flags are correct (e.g., --project, --zone, --location, --recommender).
         4. Output raw text only, no markdown formatting.
         5. NEVER use placeholders like NEW_MACHINE_TYPE, PROJECT_ID, etc. Use actual values or inform the user what's needed.
         6. If insufficient information is provided, return a helpful error message starting with "Need more info:"
@@ -62,10 +62,24 @@ def translate_to_gcloud(prompt: str) -> str:
         - N1 series: f1-micro → g1-small → n1-standard-1 → n1-standard-2 → n1-standard-4 → n1-standard-8
         - N2 series: n2-standard-2 → n2-standard-4 → n2-standard-8 → n2-standard-16
         
+        **Cost Optimization Recommenders:**
+        Common recommender IDs and their typical locations:
+        - google.compute.instance.IdleResourceRecommender (idle VMs) → location: global
+        - google.compute.address.IdleResourceRecommender (idle IP addresses) → location: region (e.g., us-central1, europe-west2) OR global
+        - google.compute.disk.IdleResourceRecommender (idle disks) → location: global
+        - google.compute.instance.MachineTypeRecommender (VM rightsizing) → location: zone (e.g., us-central1-a)
+        - google.cloudsql.instance.IdleRecommender (idle Cloud SQL) → location: region (e.g., us-central1)
+        - google.compute.commitment.UsageCommitmentRecommender (CUD recommendations) → location: global
+        
         **Context-Aware Behavior:**
         - "downgrade" = change to a smaller machine type (if current type unknown, suggest listing first)
         - "upgrade" = change to a larger machine type
         - "smallest" or "micro" = e2-micro or f1-micro
+        - "idle VMs" or "unused instances" → google.compute.instance.IdleResourceRecommender with location=global
+        - "idle IP" or "unused IP addresses" → google.compute.address.IdleResourceRecommender with location=global
+        - "idle disks" or "unused storage" → google.compute.disk.IdleResourceRecommender with location=global
+        - "rightsizing" or "resize VMs" or "optimize VM size" → MachineTypeRecommender
+        - "cost optimization" or "cost savings" (general query) → Need more info: To see all cost optimization recommendations, you need to query multiple recommenders. Try: "idle VMs", "idle IP addresses", or "idle disks" to see specific recommendations. For a specific region like europe-west2, specify it in your query.
         
         IMPORTANT: Changing machine type requires stopping the instance first!
         
@@ -77,7 +91,7 @@ def translate_to_gcloud(prompt: str) -> str:
         - "downgrade": assume one step down in same series or to e2-micro if unknown
         - "upgrade": assume one step up in same series
         
-        Example Flows:
+        Example Flows - Compute:
         User: "downgrade instance-1"
         Output: compute instances list --format="table(name,zone,machineType,status)"
         
@@ -89,6 +103,28 @@ def translate_to_gcloud(prompt: str) -> str:
         
         User: "stop, upgrade to e2-small, and restart instance-1 in zone us-central1-a"
         Output: Multi-step: compute instances stop instance-1 --zone us-central1-a && compute instances set-machine-type instance-1 --machine-type e2-small --zone us-central1-a && compute instances start instance-1 --zone us-central1-a
+        
+        Example Flows - Recommender:
+        User: "show me idle VMs" or "find unused instances" or "cost optimization recommendations"
+        Output: recommender recommendations list --location=global --recommender=google.compute.instance.IdleResourceRecommender --format=json
+        
+        User: "rightsizing recommendations for zone us-central1-a" or "optimize VM sizes in us-central1-a"
+        Output: recommender recommendations list --location=us-central1-a --recommender=google.compute.instance.MachineTypeRecommender --format=json
+        
+        User: "find idle cloud sql instances" or "unused databases"
+        Output: recommender recommendations list --location=us-central1 --recommender=google.cloudsql.instance.IdleRecommender --format=json
+        
+        User: "show idle disks" or "unused storage"
+        Output: recommender recommendations list --location=global --recommender=google.compute.disk.IdleResourceRecommender --format=json
+        
+        User: "idle IP addresses" or "unused IPs" or "find idle static IPs"
+        Output: recommender recommendations list --location=global --recommender=google.compute.address.IdleResourceRecommender --format=json
+        
+        User: "idle IP addresses in europe-west2" or "unused IPs in region europe-west2"
+        Output: recommender recommendations list --location=europe-west2 --recommender=google.compute.address.IdleResourceRecommender --format=json
+        
+        User: "committed use discount recommendations" or "CUD recommendations"
+        Output: recommender recommendations list --location=global --recommender=google.compute.commitment.UsageCommitmentRecommender --format=json
         """
         
         response = client.models.generate_content(
