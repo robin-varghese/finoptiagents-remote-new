@@ -17,16 +17,12 @@ import warnings
 warnings.filterwarnings("ignore", message="coroutine 'AsyncClient.aclose' was never awaited")
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*AsyncClient.aclose.*")
 
-# Configure logging to display tool execution logs
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # Output to console
-    ]
-)
+from app.utils.logging_config import setup_logging
 
-# Enable logging for tool modules
+# Configure logging using centralized strategy
+setup_logging()
+
+# Enable logging for tool modules explicitly if needed (optional as root logger covers them)
 logging.getLogger('mcp_server.tools').setLevel(logging.INFO)
 logging.getLogger('app.agent').setLevel(logging.INFO)
 logging.getLogger('google.adk').setLevel(logging.INFO)
@@ -72,7 +68,7 @@ st.markdown("""
 load_dotenv()
 
 # Import agents
-from app.agent import root_agent, greeting_agent
+from app.agent import finops_app, root_agent, greeting_agent
 
 # --- Sample Prompts ---
 sample_prompts = {
@@ -187,7 +183,7 @@ if "session_id" not in st.session_state:
     loop = get_or_create_eventloop()
     loop.run_until_complete(
          st.session_state.session_service.create_session(
-            app_name="finoptiagents-remote-new",
+            app_name="finoptiagents_app",
             user_id="streamlit-user",
             session_id=st.session_state.session_id,
         )
@@ -195,8 +191,7 @@ if "session_id" not in st.session_state:
 
 # --- Agent Runner Initialization ---
 runner = Runner(
-    agent=root_agent,
-    app_name="finoptiagents-remote-new",
+    app=finops_app,
     session_service=st.session_state.session_service,
 )
 

@@ -7,14 +7,29 @@ log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, 'mcp_server.log')
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        # logging.StreamHandler()  <-- REMOVED to prevent stdout/stderr corruption of MCP protocol
-    ]
-)
+# Configure base logging first
+from app.utils.logging_config import setup_logging
+setup_logging()
+
+# Add FileHandler specifically for MCP server persistence
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(file_handler)
+
+# IMPORTANT: Remove SteamHandler if present to avoid corrupting MCP stdio protocol? 
+# setup_logging uses StreamHandler(sys.stdout). For MCP over stdio, this is FATAL.
+# We must ensure root logger does NOT log to stdout for MCP server.
+# Let's override the root logger handlers for this specific entry point.
+
+root_logger = logging.getLogger()
+# Remove all handlers that stream to stdout/stderr
+for h in root_logger.handlers[:]:
+    if isinstance(h, logging.StreamHandler):
+        root_logger.removeHandler(h)
+
+# Ensure only file handler remains
+if file_handler not in root_logger.handlers:
+    root_logger.addHandler(file_handler)
 logger = logging.getLogger(__name__)
 logger.info(f"MCP Server logging to: {log_file}")
 

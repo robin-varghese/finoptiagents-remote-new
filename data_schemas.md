@@ -13,8 +13,9 @@ Stores approved budgets and release plans for projects.
 | Column Name | Data Type | Description | Example Value |
 | :--- | :--- | :--- | :--- |
 | `project_name` | STRING | The unique name of the project. | "project-alpha" |
-| `budgeted_cost` | FLOAT64 | The total approved budget for the project. | 50000.00 |
-| `planned_release_date` | STRING | The target quarter for the release. | "2025-Q1" |
+| `budget_approved` | NUMERIC | The total approved budget for the project. | 50000.00 |
+| `budget_requested` | NUMERIC | The requested budget for the project. | 60000.00 |
+| `project_approved_on` | DATE | Date of approval. | "2024-12-01" |
 
 ### 1.2 `finops_cost_usage`
 
@@ -23,10 +24,10 @@ Contains actual cost and usage data for all resources.
 | Column Name | Data Type | Description | Example Value |
 | :--- | :--- | :--- | :--- |
 | `project_name` | STRING | The name of the project the resource belongs to. | "project-alpha" |
-| `month` | STRING | The month of the cost record (e.g., "YYYY-MM"). | "2025-01" |
-| `total_cost` | FLOAT64 | The total cost incurred for the resource in that month. | 45000.00 |
+| `month` | DATE | The month of the cost record. | "2025-01-01" |
+| `monthly_cost` | NUMERIC | The total cost incurred for the resource in that month. | 45000.00 |
 | `resource_type`| STRING | The type of the resource. | "compute" |
-| `utilization_pct`| FLOAT64 | The utilization percentage of the resource. | 0.65 |
+| `resource_utilization_percent`| FLOAT | The utilization percentage of the resource (0-100). | 65.0 |
 
 ### 1.3 `earb_review`
 

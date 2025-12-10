@@ -56,13 +56,13 @@ All specialists use **structured output schemas** for reliable communication.
     ```sql
     SELECT 
         f.project_name,
-        r.budgeted_cost,
-        SUM(f.total_cost) as actual_cost,
-        ((SUM(f.total_cost) - r.budgeted_cost) / r.budgeted_cost) * 100 as variance_pct
+        r.budget_approved as budgeted_cost,
+        SUM(f.monthly_cost) as actual_cost,
+        ((SUM(f.monthly_cost) - r.budget_approved) / r.budget_approved) * 100 as variance_pct
     FROM `vector-search-poc.finoptiagents.finops_cost_usage` f
     JOIN `vector-search-poc.finoptiagents.release_train_ticket` r 
         ON f.project_name = r.project_name
-    GROUP BY f.project_name, r.budgeted_cost
+    GROUP BY f.project_name, r.budget_approved
     HAVING ABS(variance_pct) > 10
     ```
 
@@ -216,8 +216,8 @@ Before creating any agents, document the exact schemas of all tables:
 
 | Table | Required Columns | Example Values | Notes |
 |-------|------------------|----------------|-------|
-| `release_train_ticket` | `project_name`, `budgeted_cost`, `planned_release_date` | "project-alpha", 50000.00, "2025-Q1" | Stores approved budgets |
-| `finops_cost_usage` | `project_name`, `month`, `total_cost`, `resource_type`, `utilization_pct` | "project-alpha", "2025-01", 45000.00, "compute", 0.65 | Actual spend data |
+| `release_train_ticket` | `project_name`, `budget_approved`, `planned_release_date` | "project-alpha", 50000.00, "2025-Q1" | Stores approved budgets |
+| `finops_cost_usage` | `project_name`, `month`, `monthly_cost`, `resource_type`, `resource_utilization_percent` | "project-alpha", "2025-01-01", 45000.00, "compute", 65.0 | Actual spend data |
 | `earb_review` | `project_name`, `review_status`, `approval_date` | "project-alpha", "approved", "2024-12-01" | Architecture review status |
 | `vm_deletion_log` | `log_data` (JSON) | See existing schema in `descandinstructions.py` | Deletion audit trail |
 
@@ -357,7 +357,28 @@ class AgentErrorResponse(BaseModel):
 
 ---
 
-## 10. Success Metrics
+## 10. Logging & Observability
+
+To ensure deep visibility into agent performance and behavior, we utilize a centralized logging strategy aligned with Google ADK standards.
+
+### 10.1 Centralized Configuration
+Logging is configured via `app/utils/logging_config.py`. This module provides a `setup_logging()` function that must be called at the start of every entry point (`run_agent.py`, `app/playground.py`, `mcp_server/main.py`).
+
+### 10.2 Configuration & Log Levels
+Control log verbosity using the `LOG_LEVEL` environment variable.
+
+| Level | Usage | Behavior |
+|-------|-------|----------|
+| `INFO` | **Production (Default)** | Captures high-level agent lifecycle events, tool executions, and final responses. |
+| `DEBUG` | **Development** | Captures full prompt/response payloads, raw internal state, and detailed debug triggers. **Review for PII.** |
+
+### 10.3 Hybrid Telemetry
+-   **Standard Logging (Stdout):** Used for immediate, human-readable operator logs using standard Python `logging`.
+-   **Cloud Trace (Telemetry):** Structured telemetry (spans, traces) is exported to Google Cloud Trace via `app/utils/tracing.py` for performance analysis.
+
+---
+
+## 11. Success Metrics
 
 - **Response Time:** <5s for single-specialist queries, <10s for full health checks
 - **Accuracy:** >95% SQL query success rate
@@ -367,7 +388,7 @@ class AgentErrorResponse(BaseModel):
 
 ---
 
-## 11. Alternative Considered: Fully Flat Architecture
+## 12. Alternative Considered: Fully Flat Architecture
 
 **Pros:** Fastest response time (2 LLM hops), simplest routing logic  
 **Cons:** No bulk operation support, Root agent's description becomes bloated with 12+ sub-agents
@@ -376,7 +397,7 @@ class AgentErrorResponse(BaseModel):
 
 ---
 
-## 12. Next Steps
+## 13. Next Steps
 
 1.  ✅ Strategy approved → Proceed to Phase 0
 2.  📝 Assign engineer to schema documentation

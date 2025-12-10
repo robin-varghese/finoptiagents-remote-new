@@ -299,7 +299,19 @@ try:
         before_model_callback=simple_before_model_modifier,
     )
 
-    logger.info("Agent created successfully.")
+    # --- App Container with Plugins ---
+    from google.adk.apps.app import App
+    from google.adk.plugins import ReflectAndRetryToolPlugin
+
+    finops_app = App(
+        name="finoptiagents_app",
+        root_agent=root_agent,
+        plugins=[
+            ReflectAndRetryToolPlugin(max_retries=3)
+        ]
+    )
+
+    logger.info("Agent and App created successfully.")
 except Exception as e:
     logger.error(f"Failed to create agent: {e}")
     raise

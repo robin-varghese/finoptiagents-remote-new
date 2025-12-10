@@ -180,7 +180,8 @@ Create these tables in `vector-search-poc.finoptiagents`:
 ```sql
 CREATE TABLE `vector-search-poc.finoptiagents.release_train_ticket` (
     project_name STRING,
-    budgeted_cost FLOAT64,
+    budget_approved NUMERIC,
+    budget_requested NUMERIC,
     planned_release_date STRING
 );
 ```
@@ -189,10 +190,10 @@ CREATE TABLE `vector-search-poc.finoptiagents.release_train_ticket` (
 ```sql
 CREATE TABLE `vector-search-poc.finoptiagents.finops_cost_usage` (
     project_name STRING,
-    month STRING,
-    total_cost FLOAT64,
+    month DATE,
+    monthly_cost NUMERIC,
     resource_type STRING,
-    utilization_pct FLOAT64
+    resource_utilization_percent FLOAT64
 );
 ```
 

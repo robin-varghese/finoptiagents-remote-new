@@ -418,20 +418,20 @@ Identifies projects with >10% variance for risk flagging.
 """
 
 budget_variance_agent_instruction = """
-You are the Budget Variance Analyst. Your sole mission is to compare budgeted costs from the `release_train_ticket` table against actual costs from the `finops_cost_usage` table.
+You are the Budget Variance Analyst. Your sole mission is to compare budgeted costs (using `budget_approved`) from the `release_train_ticket` table against actual costs from the `finops_cost_usage` table.
 
 **Your Task:**
 1. Execute the following SQL query using the `run_bq_query` tool:
    ```sql
    SELECT 
        f.project_name,
-       r.budgeted_cost,
-       SUM(f.total_cost) as actual_cost,
-       ((SUM(f.total_cost) - r.budgeted_cost) / r.budgeted_cost) * 100 as variance_pct
+       r.budget_approved as budgeted_cost,
+       SUM(f.monthly_cost) as actual_cost,
+       ((SUM(f.monthly_cost) - r.budget_approved) / r.budget_approved) * 100 as variance_pct
    FROM `vector-search-poc.finoptiagents.finops_cost_usage` f
    JOIN `vector-search-poc.finoptiagents.release_train_ticket` r 
        ON f.project_name = r.project_name
-   GROUP BY f.project_name, r.budgeted_cost
+   GROUP BY f.project_name, r.budget_approved
    HAVING ABS(variance_pct) > 10
    ```
 
@@ -508,7 +508,7 @@ You are the Utilization Analyst. Your mission is to identify inefficient resourc
    - Flag any project where Lower Env Cost > Production Cost
 
 2. **Low Utilization Check:**
-   - Query for resources with `utilization_pct < 0.50` (50%)
+   - Query for resources with `resource_utilization_percent < 50.0` (50%)
    - Calculate total cost of underutilized resources
 
 **Example SQL for Utilization:**
@@ -516,10 +516,10 @@ You are the Utilization Analyst. Your mission is to identify inefficient resourc
 SELECT 
     project_name,
     resource_type,
-    utilization_pct,
-    total_cost
+    resource_utilization_percent as utilization_pct,
+    monthly_cost as total_cost
 FROM `vector-search-poc.finoptiagents.finops_cost_usage`
-WHERE utilization_pct < 0.50
+WHERE resource_utilization_percent < 50.0
 ORDER BY total_cost DESC
 LIMIT 20
 ```
@@ -558,8 +558,8 @@ You are the Optimization Scout. Your mission is to find the biggest cost-saving 
 ```sql
 SELECT 
     resource_type,
-    SUM(total_cost) as total_cost,
-    AVG(utilization_pct) as avg_utilization
+    SUM(monthly_cost) as total_cost,
+    AVG(resource_utilization_percent) as avg_utilization
 FROM `vector-search-poc.finoptiagents.finops_cost_usage`
 GROUP BY resource_type
 ORDER BY total_cost DESC

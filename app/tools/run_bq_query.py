@@ -35,8 +35,8 @@ def run_bq_query(query: str) -> str:
     A project not in this list may be unauthorized or "shadow IT." 
     
     Common Analysis
-    Budgeted & actual cost spent analysis: by comparing the budgeted cost in release_train_ticket and the actual cost in finops_cost_usage, 
-    this can be identifyed. Ideally the projects spending near (10% varience) to the budgeted cost is a good project. Otherwise its a bad project
+    Budgeted & actual cost spent analysis: by comparing the `budget_approved` in release_train_ticket and the actual cost in finops_cost_usage, 
+    this can be identifyed. Ideally the projects spending near (10% varience) to the `budget_approved` is a good project. Otherwise its a bad project
     Non-Compliance Analysis: The projects which were not part of release_train_ticket and/or earb_review can be onsidered as non-compliance and bad projects.
     Projects which are Non-Compliant, escalate this to leadership team. Trigger EARB review for resources exemption from automated optimization; 
     open ServiceNow CR with full analysis and route to stakeholders for approval.

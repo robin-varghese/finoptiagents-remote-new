@@ -98,7 +98,7 @@ def run_bq_query(query: str) -> str:
     A project not in this list may be unauthorized or "shadow IT." 
     
     Common Analysis
-    Budgeted & actual cost spent analysis: by comparing the budgeted cost in release_train_ticket and the actual cost in finops_cost_usage, 
+    Budgeted & actual cost spent analysis: by comparing the `budget_approved` in release_train_ticket and the actual cost in finops_cost_usage, 
     this can be identifyed. Ideally the projects spending near (10% varience) to the budgeted cost is a good project. Otherwise its a bad project
     Non-Compliance Analysis: The projects which were not part of release_train_ticket and/or earb_review can be onsidered as non-compliance and bad projects.
     Projects which are Non-Compliant, escalate this to leadership team. Trigger EARB review for resources exemption from automated optimization; 
@@ -109,6 +109,55 @@ def run_bq_query(query: str) -> str:
     logging/monitoring). Also highlight the resources where utlization is less than 50%.
     Readiness Check for Lower Environments: Cross-check Release Train Tickets and ServiceNow CR/Defects to confirm upcoming releases or open CRs. 
     If there are no planned release then there is no point to have lower environment. Mark such lower-env resources as optimization candidates.
+
+    **CRITICAL BIGQUERY TABLE SCHEMAS (Use EXACT column names):**
+
+    ### 1. `release_train_ticket`
+    Stores approved budgets and release plans.
+    | Column Name | Data Type | Description |
+    | :--- | :--- | :--- |
+    | `project_name` | STRING | Unique name of the project. |
+    | `budget_approved` | NUMERIC | The total approved budget. |
+    | `budget_requested` | NUMERIC | The requested budget. |
+    | `project_approved_on` | DATE | Date of approval. |
+
+    ### 2. `finops_cost_usage`
+    Contains actual cost and usage data.
+    | Column Name | Data Type | Description |
+    | :--- | :--- | :--- |
+    | `project_name` | STRING | The name of the project. |
+    | `month` | DATE | Month of the cost record. |
+    | `monthly_cost` | NUMERIC | Total cost incurred in that month. |
+    | `resource_type`| STRING | Type of resource (e.g., "compute"). |
+    | `resource_utilization_percent`| FLOAT | Utilization percentage (0-100). |
+
+    ### 3. `earb_review`
+    Logs Enterprise Architecture Review Board (EARB) status.
+    | Column Name | Data Type | Description |
+    | :--- | :--- | :--- |
+    | `project_name` | STRING | The name of the project. |
+    | `review_status`| STRING | Status of the EARB review. |
+    | `approval_date`| STRING | Date of approval ("YYYY-MM-DD"). |
+
+    ### 4. `vm_deletion_log`
+    Audit trail for VM deletions.
+    | Column Name | Data Type | Description |
+    | :--- | :--- | :--- |
+    | `log_data` | JSON | **Double-encoded JSON** details. See rules above. |
+    | `embedding` | VECTOR | Vector embedding (unused). |
+
+    ### 5. `servicenow_change_defect`
+    Tracks active development and bug fixes.
+    - Presence of open tickets implies the project is "active".
+
+    ### 6. `project_information_master` & `project_information_child`
+    - `project_information_master`: Core project registry.
+    - `project_information_child`: Inventory of provisioned resources.
+
+    **Common Analysis Patterns:**
+    - **Budget Variance:** Compare `release_train_ticket.budget_approved` vs `SUM(finops_cost_usage.monthly_cost)`.
+    - **Non-Compliance:** Check for projects in `finops_cost_usage` that are missing from `release_train_ticket` or `earb_review`.
+    - **Utilization:** Compare `monthly_cost` across environments (prod vs non-prod) or check `resource_utilization_percent`.
     """
     logger.info(f"[TOOL CALL] run_bq_query - Starting execution")
     logger.info(f"[TOOL INPUT] Query length: {len(query)} chars")
