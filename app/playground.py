@@ -105,8 +105,11 @@ sample_prompts = {
         "When did Robin Varghese delete the VMs",
     ],
     "Admin": [
+        "list all the finops optimisation recommandations in gcp project vector-search-poc",
         "Create a new Vertex AI RAG corpus with the specified name finoptiagents_design_docs_rag using the docs in Google Cloud Storage gs://finoptiagent-earb-designdocument2",
         "Delete the Vertex AI RAG corpus with the specified name finoptiagents_design_docs_rag",
+        "create an address named finoptiagents-teststatic-ip in region europe-west2",
+        "delete the address named finoptiagents-teststatic-ip in region europe-west2",
     ]
 }
 
