@@ -6,6 +6,9 @@ import re
 import traceback
 import base64
 import binascii
+import os
+import subprocess
+
 from typing import Any, Dict, List, Optional
 
 
@@ -154,6 +157,20 @@ def run_bq_query(query: str) -> str:
     - `project_information_master`: Core project registry.
     - `project_information_child`: Inventory of provisioned resources.
 
+    ### 7. `agent_analytics_log`
+    Logs of agent interactions and tool executions.
+    | Column Name | Data Type | Description |
+    | :--- | :--- | :--- |
+    | `timestamp` | TIMESTAMP | UTC time of the event. |
+    | `event_type` | STRING | E.g., 'LLM_REQUEST', 'TOOL_COMPLETED'. |
+    | `agent` | STRING | Name of the agent. |
+    | `session_id` | STRING | Unique session identifier. |
+    | `invocation_id` | STRING | Unique ID from invocation. |
+    | `user_id` | STRING | The user identifier. |
+    | `content` | STRING | Event data/payload. |
+    | `error_message` | STRING | Error message if any. |
+    | `is_truncated` | BOOLEAN | Whether the content was truncated. |
+    
     **Common Analysis Patterns:**
     - **Budget Variance:** Compare `release_train_ticket.budget_approved` vs `SUM(finops_cost_usage.monthly_cost)`.
     - **Non-Compliance:** Check for projects in `finops_cost_usage` that are missing from `release_train_ticket` or `earb_review`.
@@ -165,8 +182,13 @@ def run_bq_query(query: str) -> str:
     if not config.GOOGLE_PROJECT_ID:
         return json.dumps({"error": "Configuration error: GOOGLE_PROJECT_ID is not set."})
     try:
-        if any(keyword in query.upper() for keyword in ['INSERT', 'UPDATE', 'DELETE', 'MERGE', 'TRUNCATE', 'CREATE', 'DROP', 'ALTER']):
-            return json.dumps({"error": "This tool is for read-only SELECT queries."})
+        # Validate query safety
+        if ';' in query:
+             return json.dumps({"error": "Multi-statement queries (containing ';') are not allowed."})
+        
+        trimmed_query = query.strip().upper()
+        if not (trimmed_query.startswith('SELECT') or trimmed_query.startswith('WITH')):
+            return json.dumps({"error": "This tool is for read-only SELECT (or WITH) queries."})
         client = bigquery.Client(project=config.GOOGLE_PROJECT_ID)
         results = client.query(query).result()
         if results.total_rows == 0:
@@ -297,36 +319,6 @@ def list_vm_instances(project_id: str, zone: str):
         logging.error(f"Error listing instances for project '{project_id}': {e}", exc_info=True)
         return None
 
-@mcp.tool()
-def delete_vm_instance(project_id: str, instance_id: str, zone: str):
-    """
-    Deletes a VM instance and AUTOMATICALLY logs the deletion event to BigQuery upon success.
-    This is now an atomic operation.
-    """
-    tool_context = get_tool_context()
-    logging.info(f"Attempting to delete VM: '{instance_id}' in project '{project_id}' zone '{zone}'.")
-    headers = {'Content-Type': 'application/json'}
-    data = {'instance_id': instance_id, 'project_id': project_id, 'zone': zone}
-    url = f"https://agent-tools-912533822336.us-central1.run.app/delete_vms"
-
-    try:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        response.raise_for_status()
-        response_data = response.json()
-        is_deleted = (response_data.get("results") and response_data["results"][0].get("status") == "deleted")
-        if is_deleted:
-            logging.info(f"API confirmed successful deletion of '{instance_id}'.")
-            # We don't have log_vm_deletion_to_bigquery migrated yet, so we skip logging for now or need to migrate it too.
-            # Assuming log_vm_deletion_to_bigquery is internal helper.
-            # For now, we'll just return success.
-            # TODO: Migrate log_vm_deletion_to_bigquery if needed.
-            return response_data
-        else:
-            logging.warning(f"API reported failure to delete '{instance_id}': {response_data}")
-            return response_data
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error calling deletion API for instance '{instance_id}': {e}", exc_info=True)
-        return {"status": "error", "message": str(e)}
 
 @mcp.tool()
 def generate_chart_from_data(
@@ -895,3 +887,256 @@ def list_corpora() -> dict:
             "message": f"Error listing corpora: {str(e)}",
             "corpora": [],
         }
+
+@mcp.tool()
+def log_savings_impact(operation_id: str, savings_amount: float, currency: str, recommendation_id: Optional[str] = None) -> str:
+    """
+    Logs the financial impact of an operation to the 'cost_savings_log' table.
+    
+    Args:
+        operation_id (str): The UUID from log_cloud_operation.
+        savings_amount (float): The estimated monthly savings.
+        currency (str): The currency code (e.g., "USD").
+        recommendation_id (str, optional): The ID of the recommendation if applicable.
+        
+    Returns:
+        str: Status message.
+    """
+    rec_id_val = recommendation_id if recommendation_id else "N/A"
+    
+    # Use config.GOOGLE_PROJECT_ID if available
+    proj_id = config.GOOGLE_PROJECT_ID
+    if not proj_id:
+        return "Error: GOOGLE_PROJECT_ID is not configured."
+
+    # Insert into BigQuery directly to bypass run_bq_query validator (which blocks INSERT)
+    # Using fully qualified table name: project_id.finoptiagents.cost_savings_log
+    query = f"""
+        INSERT INTO `{proj_id}.finoptiagents.cost_savings_log` (operation_id, savings_amount, currency, duration, recommendation_id)
+        VALUES ('{operation_id}', {savings_amount}, '{currency}', 'monthly', '{rec_id_val}')
+    """
+    
+    try:
+        from google.cloud import bigquery
+        client = bigquery.Client(project=proj_id)
+        client.query(query).result() # Wait for the query to complete
+        return f"Successfully logged savings of {savings_amount} {currency} for operation {operation_id}."
+    except Exception as e:
+        logger.error(f"Failed to log savings: {e}")
+        return f"Failed to log savings: {e}"
+
+@mcp.tool()
+def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
+    """
+    Scans for cost optimization recommendations across Compute Engine and Cloud SQL.
+    Parses 'primaryImpact' to calculate potential savings.
+    
+    Args:
+        project_id (str): GCP Project ID.
+        zone (str): GCP Zone (default "-" for all zones).
+        
+    Returns:
+        str: JSON summary of findings and total savings.
+    """
+    import subprocess
+    import json
+    import logging
+    # Local import to avoid circular dependency if placed at top level
+    from app.finops_utils import parse_savings_from_recommender
+    
+    # Configure logging for console visibility
+    logging.getLogger().setLevel(logging.INFO)
+    
+    RECOMMENDERS = [
+        # Compute Engine
+        "google.compute.instance.IdleResourceRecommender",
+        "google.compute.instance.MachineTypeRecommender",
+        "google.compute.address.IdleResourceRecommender",
+        "google.compute.disk.IdleResourceRecommender",
+        "google.compute.image.IdleResourceRecommender",
+        "google.compute.commitment.UsageCommitmentRecommender",
+        "google.compute.instanceGroupManager.MachineTypeRecommender",
+        
+        # Cloud SQL
+        "google.cloudsql.instance.IdleRecommender",
+        "google.cloudsql.instance.OverprovisionedRecommender", 
+        "google.cloudsql.instance.UnderprovisionedRecommender",
+
+        # Cloud Run
+        "google.run.service.CostRecommender",
+        
+        # Containers (GKE) calls often require specific APIs enabled, but safe to scan
+        "google.container.DiagnosisRecommender",
+
+        # Billing / Commitments
+        "google.cloudbilling.commitment.SpendBasedCommitmentRecommender",
+        
+        # Resource Manager
+        "google.resourcemanager.projectUtilization.Recommender"
+    ]
+    
+    findings = []
+    total_savings_usd = 0.0
+    
+    logging.info(f"🔍 [Recommender Scan] Starting scan details...")
+    
+    # --- 1. Identify Target Locations ---
+    target_locations = set()
+    
+    # If a specific zone is provided (and valid), verify and us it
+    if zone and zone != "-" and zone != "ALL":
+         target_locations.add(zone)
+         if zone.count('-') >= 2:
+             target_locations.add(zone.rsplit('-', 1)[0])
+    else:
+        # Discovery Mode
+        default_zone = os.environ.get("GOOGLE_ZONE", "us-east4-a")
+        target_locations.add(default_zone)
+        if default_zone.count('-') >= 2:
+             target_locations.add(default_zone.rsplit('-', 1)[0])
+
+        # B. Discover Active Regions (VMs)
+        try:
+            logging.info(f"   [Scan] Discovering active VM regions...")
+            res = subprocess.run(
+                ["gcloud", "compute", "instances", "list", f"--project={project_id}", "--format=value(zone)"],
+                capture_output=True, text=True
+            )
+            if res.returncode == 0:
+                for z in res.stdout.splitlines():
+                    if z:
+                        target_locations.add(z)
+                        if z.count('-') >= 2:
+                            target_locations.add(z.rsplit('-', 1)[0])
+            else:
+                logging.warning(f"   [Scan] VM discovery failed: {res.stderr}")
+        except Exception as e:
+            logging.error(f"   [Scan] Error identifying VM regions: {e}")
+
+        # C. Discover Active Regions (Addresses)
+        try:
+            logging.info(f"   [Scan] Discovering active Address regions...")
+            res = subprocess.run(
+                ["gcloud", "compute", "addresses", "list", f"--project={project_id}", "--format=value(region)"],
+                capture_output=True, text=True
+            )
+            if res.returncode == 0:
+                for r in res.stdout.splitlines():
+                    if r: 
+                         region_name = r.split('/')[-1]
+                         target_locations.add(region_name)
+            else:
+                logging.warning(f"   [Scan] Address discovery failed: {res.stderr}")
+
+        except Exception as e:
+            logging.error(f"   [Scan] Error identifying Address regions: {e}")
+
+    # Always scan GLOBAL
+    target_locations.add("global")
+    target_locations = {loc for loc in target_locations if loc and loc != "-"}
+    
+    logging.info(f"   [Scan] Targeted locations: {target_locations}")
+    
+    # Categorize Recommenders by Location Scope
+    GLOBAL_RECOMMENDERS = {
+        "google.compute.image.IdleResourceRecommender",
+        "google.compute.disk.IdleResourceRecommender",
+        "google.cloudbilling.commitment.SpendBasedCommitmentRecommender",
+        "google.resourcemanager.projectUtilization.Recommender",
+        # IPs can be global or regional, but scanning global often covers most external IPs
+        "google.compute.address.IdleResourceRecommender" 
+    }
+    
+    # Recommenders that strictly require Region (e.g. us-central1)
+    REGIONAL_RECOMMENDERS = {
+        "google.cloudsql.instance.IdleRecommender",
+        "google.cloudsql.instance.OverprovisionedRecommender",
+        "google.cloudsql.instance.UnderprovisionedRecommender",
+        "google.run.service.CostRecommender",
+        "google.compute.commitment.UsageCommitmentRecommender",
+    }
+
+    # Recommenders that strictly require Zone (e.g. us-central1-a)
+    ZONAL_RECOMMENDERS = {
+        "google.compute.instance.IdleResourceRecommender",
+        "google.compute.instance.MachineTypeRecommender",
+        "google.compute.instanceGroupManager.MachineTypeRecommender",
+        "google.container.DiagnosisRecommender" # Often cluster-location specific
+    }
+
+    for recommender in RECOMMENDERS:
+        for location in target_locations:
+            is_zone = len(location.split('-')) > 2
+            is_region = len(location.split('-')) == 2
+            is_global = location == "global"
+            
+            # Skip invalid pairings
+            if recommender in GLOBAL_RECOMMENDERS and not is_global:
+                continue
+            if recommender in REGIONAL_RECOMMENDERS and not is_region:
+                continue
+            if recommender in ZONAL_RECOMMENDERS and not is_zone:
+                continue
+            
+            # Special Case: Address Recommender can technically key off regions too, 
+            # but usually global catch-all is sufficient for standard static IPs. 
+            # If explicit region scan is needed, logic can be adjusted.
+            
+            cmd = [
+                "gcloud", "recommender", "recommendations", "list",
+                f"--recommender={recommender}",
+                f"--project={project_id}",
+                f"--location={location}",
+                "--format=json"
+            ]
+
+            try:
+                # logging.info(f"   [Scan] Checking {recommender} in {location}...") 
+                # (Commented out to reduce noise, but can enable if needed)
+                
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    # checking availability is normal, so only debug log here unless critical
+                    # logging.debug(f"     -> Skipped/Failed: {result.stderr[:50]}...")
+                    continue
+                    
+                data = json.loads(result.stdout)
+                
+                if data:
+                     logging.info(f"   [Scan] ✅ Found {len(data)} recommendations in {location} for {recommender}")
+
+                for rec in data:
+                    savings_data = parse_savings_from_recommender(rec)
+                    savings = savings_data["monthly_savings"]
+                    currency = savings_data["currency"]
+                    
+                    if currency == "USD":
+                        total_savings_usd += savings
+                    
+                    rec_id = rec.get("name", "")
+                    if not any(f.get("id") == rec_id for f in findings):
+                         findings.append({
+                            "id": rec_id,
+                            "recommender": recommender,
+                            "description": rec.get("description"),
+                            "state": rec.get("stateInfo", {}).get("state"),
+                            "savings_monthly": savings,
+                            "currency": currency,
+                            "resource": rec.get("content", {}).get("operationGroups", [{}])[0].get("operations", [{}])[0].get("resource", "unknown").split('/')[-1],
+                            "location": location
+                        })
+                    
+            except Exception as e:
+                logging.error(f"   [Scan] ❌ Execution error for {recommender} in {location}: {e}")
+                continue
+
+    logging.info(f"🔍 [Recommender Scan] Complete. Total Savings Identified: ${round(total_savings_usd, 2)}")
+
+    report = {
+        "status": "success",
+        "total_potential_savings_usd": round(total_savings_usd, 2),
+        "recommendation_count": len(findings),
+        "details": findings
+    }
+    return json.dumps(report, indent=2)
+

@@ -76,13 +76,39 @@ This template follows a "bring your own agent" approach - you focus on your busi
 4. **Deploy:** Set up and initiate the CI/CD pipelines, customizing tests as necessary. Refer to the [deployment section](#deployment) for comprehensive instructions. For streamlined infrastructure deployment, simply run `uvx agent-starter-pack setup-cicd`. Check out the [`agent-starter-pack setup-cicd` CLI command](https://googlecloudplatform.github.io/agent-starter-pack/cli/setup_cicd.html). Currently supports GitHub with both Google Cloud Build and GitHub Actions as CI/CD runners.
 5. **Monitor:** Track performance and gather insights using Cloud Logging, Tracing, and the Looker Studio dashboard to iterate on your application.
 
-The agent is designed to assist with a wide range of Google Cloud financial operations and resource management tasks:
+The agent is designed to assist with a wide range of Google Cloud financial operations and resources management tasks, now powered by an advanced FinOps suite:
 
-*   **VM Management**: List, delete, and check CPU utilization for virtual machines across your projects.
-*   **Data Analysis & Reporting**: Answer complex questions about cloud costs, resource usage, and compliance by executing read-only SQL queries against your BigQuery datasets.
-*   **Data Visualization**: Automatically generate interactive bar, line, and pie charts from the data retrieved via BigQuery to help visualize trends and insights.
-*   **Implementation Review (RAG)**: Compare deployed cloud resources against design documents for compliance using a Retrieval-Augmented Generation (RAG) agent.
-*   **Analyze VM Deletion History**: Provide insights into past VM deletion events by querying dedicated audit logs.
+### 1. Cost Optimization & Recommenders (NEW)
+Comprehensive scanning using 16+ Google Cloud Recommenders across Global, Regional, and Zonal scopes:
+*   **Compute Engine**:
+    *   **Idle VM Recommender**: Identification and termination of zombie instances.
+    *   **Rightsizing Recommender**: Recommendations for over/under-provisioned VMs and Instance Groups (MIGs).
+    *   **Idle Resource Recommender**: Detection of unused IP addresses, Disks, and Custom Images.
+*   **Google Kubernetes Engine (GKE)**:
+    *   **Cluster Diagnosis**: Identification of idle, over-provisioned, or under-provisioned clusters and node pools.
+*   **Cloud SQL**:
+    *   **Instance Rightsizing**: Detection of idle, over-provisioned, and under-provisioned database instances.
+*   **Cloud Run**:
+    *   **Service Optimization**: Cost and CPU allocation recommendations for serverless workloads.
+*   **Committed Use Discounts (CUDs)**:
+    *   **Commitment Analysis**: Insights into Spend-based and Usage-based commitment utilization.
+
+### 2. FinOps Data Analysis & Reporting
+*   **BigQuery Integration**: The agent executes read-only SQL queries against your BigQuery datasets to answer complex questions about:
+    *   **Cloud Costs**: Daily/Monthly spend tracking by project, service, or label.
+    *   **Resource Usage**: CPU, Memory, and Network utilization trends.
+    *   **Compliance**: Verification of resource adherence to governance policies.
+
+### 3. Automated Auditing & Logging (NEW)
+*   **BigQuery Auditing Plugin**: A custom-built plugin automatically logs every agent action, tool call, and state change to `agent_analytics_log`, creating an immutable audit trail.
+*   **Cost Savings Ledger**:
+    *   **Dedicated Savings Log**: Every successful cost-saving operation (e.g., deleting a VM, rightsizing) is automatically logged to the `cost_savings_log` table.
+    *   **Impact Tracking**: Tracks realized savings in USD, linked to specific operation IDs for ROI analysis.
+*   **VM Deletion Auditing**: Specialized auditing for "Who deleted what and when?" queries, parsing complex JSON logs from `vm_deletion_log`.
+
+### 4. Visualization & Design Review
+*   **Data Visualization**: Automatically generate interactive bar, line, and pie charts from BigQuery data.
+*   **Implementation Review (RAG)**: Compare deployed cloud resources against design documents using retrieval-augmented generation.
 
 ### Development Workflow
 
@@ -99,7 +125,9 @@ This project uses a **hybrid tool architecture** combining direct imports and MC
 
 ### Tool Organization
 
-All 13 tools are defined in `mcp_server/tools.py`:
+All 15 tools are defined in `mcp_server/tools.py`:
+- `scan_cost_recommendations` - Unified cost scanner (16+ recommenders)
+- `log_savings_impact` - Logs realized savings to BigQuery
 - `run_bq_query` - Execute BigQuery queries
 - `send_email` - Send emails via Cloud Function
 - `list_vm_instances` - List GCP VMs

@@ -29,7 +29,32 @@ Contains actual cost and usage data for all resources.
 | `resource_type`| STRING | The type of the resource. | "compute" |
 | `resource_utilization_percent`| FLOAT | The utilization percentage of the resource (0-100). | 65.0 |
 
-### 1.3 `earb_review`
+### 1.3 `cloud_operations_log`
+Description: Stores a complete audit trail of all cloud operations performed by agents or users.
+
+| Field Name | Type | Mode | Description |
+| :--- | :--- | :--- | :--- |
+| `operation_id` | STRING | REQUIRED | Unique UUID for the operation. |
+| `actor` | STRING | REQUIRED | User email or agent name who initiated the action. |
+| `timestamp` | TIMESTAMP | REQUIRED | UTC timestamp of the operation. |
+| `action_type` | STRING | REQUIRED | Type of action (e.g., PROVISION, STOP, DELETE, RIGHTSIZE). |
+| `resource_id` | STRING | NULLABLE | Name or ID of the affected resource. |
+| `details` | JSON | NULLABLE | Full JSON details of the operation/response. |
+| `status` | STRING | REQUIRED | Status of the operation (SUCCESS, FAILED). |
+| `operation_source` | STRING | NULLABLE | Origin of the operation (e.g., 'recommender_api', 'admin_manual'). |
+
+### 1.4 `cost_savings_log`
+Description: Tracks the estimated financial impact of optimized operations.
+
+| Field Name | Type | Mode | Description |
+| :--- | :--- | :--- | :--- |
+| `operation_id` | STRING | REQUIRED | Foreign key linking to `cloud_operations_log`. |
+| `savings_amount` | FLOAT | REQUIRED | Estimated monthly savings amount. |
+| `currency` | STRING | REQUIRED | Currency code (e.g., USD). |
+| `duration` | STRING | NULLABLE | Duration of savings (e.g., 'monthly'). |
+| `recommendation_id` | STRING | NULLABLE | ID of the recommendation (if applicable). |
+
+### 1.5 `earb_review`
 
 Logs the Enterprise Architecture Review Board (EARB) status for projects.
 
@@ -39,7 +64,7 @@ Logs the Enterprise Architecture Review Board (EARB) status for projects.
 | `review_status`| STRING | The current status of the EARB review. | "approved" |
 | `approval_date`| STRING | The date of the EARB approval (e.g., "YYYY-MM-DD"). | "2024-12-01" |
 
-### 1.4 `vm_deletion_log`
+### 1.6 `vm_deletion_log`
 
 Provides an audit trail for VM deletion events.
 

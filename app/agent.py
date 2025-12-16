@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 from mcp_server.tools import (
     run_bq_query,
     send_email,
-    list_vm_instances, 
-    delete_vm_instance,
+    list_vm_instances,
     generate_chart_from_data,
     call_cpu_utilization_agent,
     rag_query,
@@ -31,18 +30,20 @@ from mcp_server.tools import (
     delete_document,
     get_corpus_info,
     get_corpus_info,
-    list_corpora
+    list_corpora,
+    log_savings_impact,
+    scan_cost_recommendations
 )
 from app.tools.gcloud_mcp_tools import run_gcloud_command
 from app.tools.monitoring_mcp_tools import query_time_series, query_logs, list_metrics
-from app.tools.log_deletion import log_deletion_tool
+
+
 
 # List of all available tools
 ALL_TOOLS = [
     run_bq_query,
     send_email,
     list_vm_instances,
-    delete_vm_instance,
     generate_chart_from_data,
     call_cpu_utilization_agent,
     rag_query,
@@ -51,10 +52,11 @@ ALL_TOOLS = [
     delete_corpus,
     delete_document,
     get_corpus_info,
-    list_corpora
+    list_corpora,
+    log_savings_impact,
+    scan_cost_recommendations
 ]
 
-DELETE_VM_TOOLS = ALL_TOOLS + [log_deletion_tool]
 
 #*************************START: Call Back ***************************************
 def simple_before_model_modifier(
@@ -167,7 +169,7 @@ gcloud_recommender_agent = LlmAgent(
     model="gemini-2.5-flash",
     description=descandinstructions.gcloud_recommender_agent_description,
     instruction=descandinstructions.gcloud_recommender_agent_instruction,
-    tools=[run_gcloud_command]
+    tools=[run_gcloud_command, scan_cost_recommendations],
 )
 
 # --- FinOps Analytics Manager (Coordinates all specialists) ---
@@ -195,28 +197,20 @@ escalation_agent = LlmAgent(
     tools=[send_email],  # ServiceNow integration to be added later
 )
 
-# --- VM Deletion Auditor Agent (Compliance & Security) ---
-vm_deletion_auditor_agent = LlmAgent(
-    name="vm_deletion_auditor_agent",
+# --- Log Savings Impact Agent (NEW) ---
+log_savings_impact_agent = LlmAgent(
+    name="log_savings_impact_agent",
     model="gemini-2.5-flash",
-    description=descandinstructions.vm_deletion_auditor_agent_description,
-    instruction=descandinstructions.vm_deletion_auditor_agent_instruction,
-    tools=[run_bq_query],
-    output_schema=schemas.VmDeletionAuditResult,
+    description=descandinstructions.compliance_logger_agent_description, # Keep old description for now
+    instruction=descandinstructions.compliance_logger_agent_instruction, # Keep old instruction for now
+    tools=[log_savings_impact],
 )
 
 # =============================================================================
 # Existing Agents (Retained from previous architecture)
 # =============================================================================
 
-# 6. --- SIMPLIFIED AGENT DEFINITIONS ---
-delete_vm_instance_agent = LlmAgent(
-    name="delete_vm_instance_agent",
-    model="gemini-2.5-flash",
-    description=descandinstructions.delete_vm_instance_desc,
-    instruction=descandinstructions.delete_vm_instance_instruction,
-    tools=DELETE_VM_TOOLS,
-)
+
 
 greeting_agent = LlmAgent(
     name="Greeter",
@@ -230,7 +224,7 @@ gcloud_ops_agent = LlmAgent(
     model="gemini-2.5-flash",
     description=descandinstructions.gcloud_ops_agent_description,
     instruction=descandinstructions.gcloud_ops_agent_instruction,
-    tools=[run_gcloud_command]
+    tools=[run_gcloud_command],
 )
 
 monitoring_agent = LlmAgent(
@@ -238,7 +232,7 @@ monitoring_agent = LlmAgent(
     model="gemini-2.5-flash",
     description=descandinstructions.monitoring_agent_description,
     instruction=descandinstructions.monitoring_agent_instruction,
-    tools=[query_time_series, query_logs, list_metrics]
+    tools=[query_time_series, query_logs, list_metrics],
 )
 
 # --- The Single, Simplified, and Robust RAG Agent ---
@@ -258,6 +252,38 @@ def debug_after_model(callback_context, llm_response):
 
 
 
+
+
+# Tools available to the Root Agent (Subset of ALL_TOOLS)
+# We exclude specialized tools like 'scan_cost_recommendations' to FORCE delegation to specialists.
+ROOT_TOOLS = [
+    run_bq_query,
+    send_email,
+    list_vm_instances,
+    generate_chart_from_data,
+    call_cpu_utilization_agent,
+    # rag_query, # Root delegates RAG to rag_agent
+    # create_corpus,
+    # add_data,
+    # delete_corpus,
+    # delete_document,
+    # get_corpus_info,
+    # list_corpora,
+    log_savings_impact,
+    run_gcloud_command, # Kept for "General Inventory" capability
+    # scan_cost_recommendations # REMOVED: Must delegate to gcloud_recommender_agent
+]
+
+# --- BQ Auditor Agent (NEW) ---
+bq_auditor_agent = LlmAgent(
+    name="bq_auditor_agent",
+    model="gemini-2.5-flash",
+    description=descandinstructions.bq_auditor_agent_description,
+    instruction=descandinstructions.bq_auditor_agent_instruction,
+    tools=[run_bq_query],
+)
+
+
 try:
     design_compliance_check_rag_agent = Agent(
         name="design_compliance_check_rag_agent",
@@ -267,8 +293,6 @@ try:
         tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
         instruction=descandinstructions.rag_agent_instruction,
     )
-
-
 
     # --- Final, Simplified Root Agent ---
     root_agent = LlmAgent(
@@ -280,21 +304,20 @@ try:
         description=descandinstructions.root_agent_description,
         instruction=(descandinstructions.root_agent_instruction),
         # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
-        tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
+        tools=ROOT_TOOLS,  # Direct tool imports (no MCP subprocess)
         sub_agents=[
             # FinOps Manager (for bulk operations and routes to specialists internally)
             finops_analytics_manager,
             # Action agents
             escalation_agent,
             # Compliance agents
-            vm_deletion_auditor_agent,
-            # Existing agents
-            delete_vm_instance_agent,
+            log_savings_impact_agent,
             greeting_agent,
             design_compliance_check_rag_agent,
             gcloud_ops_agent,
             monitoring_agent,
             gcloud_recommender_agent, # Added the new agent
+            bq_auditor_agent, # Added the new agent
         ],
         before_model_callback=simple_before_model_modifier,
     )
@@ -302,12 +325,22 @@ try:
     # --- App Container with Plugins ---
     from google.adk.apps.app import App
     from google.adk.plugins import ReflectAndRetryToolPlugin
+    from google.adk.plugins.bigquery_agent_analytics_plugin import BigQueryAgentAnalyticsPlugin
+
+    # --- Initialize and attach the new analytics plugin ---
+    analytics_plugin = BigQueryAgentAnalyticsPlugin(
+        project_id="vector-search-poc",
+        dataset_id="finoptiagents",
+        table_id="agent_analytics_log",
+        location="us-central1"
+    )
 
     finops_app = App(
         name="finoptiagents_app",
         root_agent=root_agent,
         plugins=[
-            ReflectAndRetryToolPlugin(max_retries=3)
+            ReflectAndRetryToolPlugin(max_retries=3),
+            analytics_plugin,
         ]
     )
 

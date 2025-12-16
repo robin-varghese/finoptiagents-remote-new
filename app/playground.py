@@ -1,8 +1,11 @@
 import asyncio
 import streamlit as st
 from google.adk.runners import Runner
+from google.adk.apps import App
+from google.adk.plugins.bigquery_agent_analytics_plugin import BigQueryAgentAnalyticsPlugin
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
+from google.genai import errors as google_genai_errors
 from dotenv import load_dotenv
 import json
 import plotly.graph_objects as go
@@ -60,6 +63,54 @@ st.markdown("""
         }
         .st-emotion-cache-1c7y2kd {
             background-color: rgba(100,100,100,0.1);
+        }
+        /* Smaller font for sidebar */
+        [data-testid="stSidebar"] p, [data-testid="stSidebar"] button, [data-testid="stSidebar"] div {
+            font-size: 0.85rem !important;
+        }
+        /* Loading Animation */
+        .loading-dots {
+            display: inline-block;
+            position: relative;
+            width: 64px;
+            height: 24px;
+        }
+        .loading-dots div {
+            position: absolute;
+            top: 6px;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: #2196F3;
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .loading-dots div:nth-child(1) {
+            left: 6px;
+            animation: loading-dots1 0.6s infinite;
+        }
+        .loading-dots div:nth-child(2) {
+            left: 6px;
+            animation: loading-dots2 0.6s infinite;
+        }
+        .loading-dots div:nth-child(3) {
+            left: 26px;
+            animation: loading-dots2 0.6s infinite;
+        }
+        .loading-dots div:nth-child(4) {
+            left: 45px;
+            animation: loading-dots3 0.6s infinite;
+        }
+        @keyframes loading-dots1 {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        @keyframes loading-dots3 {
+            0% { transform: scale(1); }
+            100% { transform: scale(0); }
+        }
+        @keyframes loading-dots2 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(19px, 0); }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -192,11 +243,11 @@ if "session_id" not in st.session_state:
         )
     )
 
-# --- Agent Runner Initialization ---
-runner = Runner(
-    app=finops_app,
-    session_service=st.session_state.session_service,
-)
+# --- Agent Runner Initialization (MOVED LOCAL FOR PLUGIN FLUSHING) ---
+# runner = Runner(
+#     app=finops_app,
+#     session_service=st.session_state.session_service,
+# )
 
 # --- Chat History Display ---
 for message in st.session_state.messages:
@@ -229,14 +280,63 @@ if prompt:
         try:
             thinking_placeholder = st.empty()
             
+            # SHOW LOADING ANIMATION
+            thinking_placeholder.markdown("""
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="loading-dots"><div></div><div></div><div></div><div></div></div>
+                    <span style="color: #666; font-style: italic;">Thinking...</span>
+                </div>
+            """, unsafe_allow_html=True)
+            
             async def run_agent_and_get_final_response(message_to_agent):
                 response_text = ""
                 thinking_steps = []
-                async for event in runner.run_async(
-                    user_id="streamlit-user",
-                    session_id=st.session_state.session_id,
-                    new_message=message_to_agent,
-                ):
+                
+                # --- LOCAL SETUP FOR PLUGIN LIFECYCLE MANAGEMENT ---
+                analytics_plugin = BigQueryAgentAnalyticsPlugin(
+                    project_id="vector-search-poc",
+                    dataset_id="finoptiagents",
+                    table_id="agent_analytics_log",
+                    location="us-central1"
+                )
+                
+                # Recreate app instance locally to attach our local plugin instance
+                # We reuse root_agent and Reflect plugin from global if needed, or just new list
+                from app.agent import ReflectAndRetryToolPlugin # Import relevant potential plugins
+                
+                local_app = App(
+                    name="finoptiagents_app",
+                    root_agent=root_agent,
+                    plugins=[
+                        ReflectAndRetryToolPlugin(max_retries=3),
+                        analytics_plugin
+                    ]
+                )
+                
+                local_runner = Runner(
+                    app=local_app,
+                    session_service=st.session_state.session_service,
+                )
+                
+                try:
+                    async for event in local_runner.run_async(
+                        user_id="streamlit-user",
+                        session_id=st.session_state.session_id,
+                        new_message=message_to_agent,
+                    ):
+                        # DEBUG LOGGING START
+                        logging.info(f"Runner Event received: {type(event)}")
+                        if hasattr(event, 'content') and event.content:
+                            logging.info(f"Event Content Role: {event.content.role}")
+                            logging.info(f"Event Content Parts: {event.content.parts}")
+                        if hasattr(event, 'function_calls') and event.function_calls:
+                            logging.info(f"Event Function Calls: {event.function_calls}")
+                    # DEBUG LOGGING END
+                    
+                    if hasattr(event, 'error_message') and event.error_message:
+                        st.error(f"Agent Error: {event.error_message} (Code: {getattr(event, 'error_code', 'N/A')})")
+                        logging.error(f"Agent Error Event: {event.error_message}")
+
                     if hasattr(event, 'function_calls') and event.function_calls:
                         # Assuming single tool call for simplicity in display
                         func_call = event.function_calls[0]
@@ -246,7 +346,11 @@ if prompt:
                     if hasattr(event, 'content') and event.content and event.content.role == 'model':
                         if event.content.parts and event.content.parts[0].text:
                             response_text += event.content.parts[0].text
-                
+                finally:
+                    logging.info("Closing analytics plugin (flushing logs)...")
+                    if 'analytics_plugin' in locals() and analytics_plugin:
+                        await analytics_plugin.close()
+
                 return response_text
 
             # Use asyncio.run() for robust event loop management
@@ -269,7 +373,8 @@ if prompt:
                 else:
                     raise e
             
-            logging.info(f"Agent returned final response.")
+            logging.info(f"Agent returned final response. Length: {len(final_response)}")
+            logging.info(f"Final Response Content: {final_response!r}")
             thinking_placeholder.empty()
             
             # --- START: FINAL, CORRECTED RENDERING LOGIC ---
@@ -312,6 +417,11 @@ if prompt:
             # --- END: FINAL, CORRECTED RENDERING LOGIC ---
 
         # This `except` block corresponds to the main `try` at the top
+        except google_genai_errors.ServerError as e:
+            logging.error(f"A server error occurred during agent execution: {e}", exc_info=True)
+            error_message = "The model is currently unavailable or overloaded (503 Error). Please try again in a few moments."
+            st.error(error_message)
+            final_content_to_store = error_message
         except Exception as e:
             logging.error(f"An error occurred during agent execution: {e}", exc_info=True)
             st.error(f"An error occurred: {e}\n\nTraceback:\n```\n{traceback.format_exc()}\n```")

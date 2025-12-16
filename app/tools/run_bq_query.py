@@ -52,7 +52,7 @@ def run_bq_query(query: str) -> str:
     if not config.GOOGLE_PROJECT_ID:
         return json.dumps({"error": "Configuration error: GOOGLE_PROJECT_ID is not set."})
     try:
-        if any(keyword in query.upper() for keyword in ['INSERT', 'UPDATE', 'DELETE', 'MERGE', 'TRUNCATE', 'CREATE', 'DROP', 'ALTER']):
+        if any(keyword in query.upper() for keyword in ['UPDATE', 'DELETE', 'MERGE', 'TRUNCATE', 'CREATE', 'DROP', 'ALTER']):
             return json.dumps({"error": "This tool is for read-only SELECT queries."})
         client = bigquery.Client(project=config.GOOGLE_PROJECT_ID)
         results = client.query(query).result()

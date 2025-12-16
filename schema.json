@@ -1,0 +1,102 @@
+{
+  "clustering": {
+    "fields": [
+      "event_type",
+      "agent",
+      "user_id"
+    ]
+  },
+  "creationTime": "1765917239490",
+  "etag": "P27wi9q77nY2CNzjupry6w==",
+  "id": "vector-search-poc:finoptiagents.agent_analytics_log",
+  "kind": "bigquery#table",
+  "lastModifiedTime": "1765917239537",
+  "location": "us-central1",
+  "numActiveLogicalBytes": "0",
+  "numBytes": "0",
+  "numLongTermBytes": "0",
+  "numLongTermLogicalBytes": "0",
+  "numRows": "0",
+  "numTotalLogicalBytes": "0",
+  "partitionDefinition": {
+    "partitionedColumn": [
+      {
+        "field": "timestamp"
+      }
+    ]
+  },
+  "schema": {
+    "fields": [
+      {
+        "description": "The UTC time at which the event was logged.",
+        "mode": "REQUIRED",
+        "name": "timestamp",
+        "type": "TIMESTAMP"
+      },
+      {
+        "description": "Indicates the type of event being logged (e.g., 'LLM_REQUEST', 'TOOL_COMPLETED').",
+        "mode": "NULLABLE",
+        "name": "event_type",
+        "type": "STRING"
+      },
+      {
+        "description": "The name of the ADK agent or author associated with the event.",
+        "mode": "NULLABLE",
+        "name": "agent",
+        "type": "STRING"
+      },
+      {
+        "description": "A unique identifier to group events within a single conversation or user session.",
+        "mode": "NULLABLE",
+        "name": "session_id",
+        "type": "STRING"
+      },
+      {
+        "description": "A unique identifier for each individual agent execution or turn within a session.",
+        "mode": "NULLABLE",
+        "name": "invocation_id",
+        "type": "STRING"
+      },
+      {
+        "description": "The identifier of the user associated with the current session.",
+        "mode": "NULLABLE",
+        "name": "user_id",
+        "type": "STRING"
+      },
+      {
+        "description": "The event-specific data (payload). Format varies by event_type.",
+        "mode": "NULLABLE",
+        "name": "content",
+        "type": "STRING"
+      },
+      {
+        "description": "Populated if an error occurs during the processing of the event.",
+        "mode": "NULLABLE",
+        "name": "error_message",
+        "type": "STRING"
+      },
+      {
+        "description": "Indicates if the content field was truncated due to size limits.",
+        "mode": "NULLABLE",
+        "name": "is_truncated",
+        "type": "BOOLEAN"
+      }
+    ]
+  },
+  "selfLink": "https://bigquery.googleapis.com/bigquery/v2/projects/vector-search-poc/datasets/finoptiagents/tables/agent_analytics_log",
+  "streamingBuffer": {
+    "estimatedBytes": "6589",
+    "estimatedRows": "10",
+    "oldestEntryTime": "1765917250673"
+  },
+  "tableReference": {
+    "datasetId": "finoptiagents",
+    "projectId": "vector-search-poc",
+    "tableId": "agent_analytics_log"
+  },
+  "timePartitioning": {
+    "field": "timestamp",
+    "type": "DAY"
+  },
+  "type": "TABLE"
+}
