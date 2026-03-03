@@ -7,10 +7,22 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
 
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
+
+
+class ProjectVariance(BaseModel):
+    """Specific variance details for a project."""
+    project_name: str = Field(description="Name of the project")
+    variance_pct: float = Field(description="Budget variance percentage")
+    budgeted: float = Field(description="Budgeted cost amount")
+    actual: float = Field(description="Actual spent cost amount")
+
+
 class BudgetVarianceResult(BaseModel):
     """Output schema for the BudgetVarianceAgent."""
-    projects_at_risk: list[dict] = Field(
-        description="List of projects with >10% budget variance. Each dict contains: project_name, variance_pct, budgeted, actual"
+    projects_at_risk: list[ProjectVariance] = Field(
+        description="List of projects with >10% budget variance."
     )
     variance_threshold: float = Field(
         default=0.10,
@@ -40,23 +52,45 @@ class ComplianceResult(BaseModel):
     )
 
 
+class AnomalousEnvironment(BaseModel):
+    """Details of environment cost anomalies."""
+    project: str = Field(description="Project name")
+    prod_cost: float = Field(description="Production environment cost")
+    lower_env_cost: float = Field(description="Lower environment cost")
+
+
+class LowUtilizationResource(BaseModel):
+    """Details of low-utilization resources."""
+    resource_id: str = Field(description="Unique identifier for the resource")
+    utilization_pct: float = Field(description="Current utilization percentage")
+    cost: float = Field(description="Monthly cost of the resource")
+
+
 class UtilizationResult(BaseModel):
     """Output schema for the UtilizationAnalystAgent."""
-    anomalous_environments: list[dict] = Field(
-        description="Environments where lower env cost > production cost. Each dict contains: project, prod_cost, lower_env_cost"
+    anomalous_environments: list[AnomalousEnvironment] = Field(
+        description="Environments where lower env cost > production cost."
     )
-    low_utilization_resources: list[dict] = Field(
-        description="Resources with <50% utilization. Each dict contains: resource_id, utilization_pct, cost"
+    low_utilization_resources: list[LowUtilizationResource] = Field(
+        description="Resources with <50% utilization."
     )
     total_potential_savings: float = Field(
         description="Estimated total monthly savings from addressing inefficiencies"
     )
 
 
+class CostContributor(BaseModel):
+    """Details of a major cost-contributing resource."""
+    resource_type: str = Field(description="Type of resource (e.g., Compute, Storage)")
+    cost: float = Field(description="Monthly cost")
+    utilization: float = Field(description="Average utilization percentage")
+    savings_potential: float = Field(description="Estimated monthly savings potential")
+
+
 class OptimizationResult(BaseModel):
     """Output schema for the OptimizationScoutAgent."""
-    top_cost_contributors: list[dict] = Field(
-        description="Top 10 cost contributors. Each dict contains: resource_type, cost, utilization, savings_potential"
+    top_cost_contributors: list[CostContributor] = Field(
+        description="Top 10 cost contributors."
     )
     optimization_candidates: list[str] = Field(
         description="List of resource IDs that are prime optimization targets (high cost + low utilization)"
@@ -66,10 +100,18 @@ class OptimizationResult(BaseModel):
     )
 
 
+class ZombieEnvironment(BaseModel):
+    """Details of potentially redundant environment."""
+    env_name: str = Field(description="Environment name")
+    cost: float = Field(description="Monthly cost")
+    days_idle: int = Field(description="Number of days since last activity")
+    active_tickets: int = Field(description="Number of active tickets related to this env")
+
+
 class ReadinessResult(BaseModel):
     """Output schema for the EnvironmentReadinessAgent."""
-    zombie_environments: list[dict] = Field(
-        description="Lower environments without active justification. Each dict contains: env_name, cost, days_idle, active_tickets"
+    zombie_environments: list[ZombieEnvironment] = Field(
+        description="Lower environments without active justification."
     )
     justified_environments: list[str] = Field(
         description="List of environment names that have valid justification"
@@ -106,6 +148,12 @@ class FinOpsHealthReport(BaseModel):
     )
 
 
+class PartialErrorResult(BaseModel):
+    """Partial results obtained before an error occurred."""
+    message: str = Field(description="Summary of partial progress")
+    data: Optional[str] = Field(default=None, description="Optional partial data captured")
+
+
 class AgentErrorResponse(BaseModel):
     """Standardized error response schema for all agents."""
     error_type: Literal["data_unavailable", "query_failed", "api_timeout"] = Field(
@@ -117,16 +165,25 @@ class AgentErrorResponse(BaseModel):
     fallback_executed: bool = Field(
         description="Whether a fallback strategy was executed"
     )
-    partial_results: Optional[dict] = Field(
+    partial_results: Optional[PartialErrorResult] = Field(
         default=None,
         description="Any partial results that were obtained before the error"
     )
 
 
+class DeletedVm(BaseModel):
+    """Audit details for a deleted VM."""
+    vm_name: str = Field(description="Name of the VM")
+    deleted_by: str = Field(description="User who performed the deletion")
+    deletion_timestamp: str = Field(description="Timestamp of the deletion event")
+    zone: str = Field(description="GCP zone")
+    project_id: str = Field(description="GCP project ID")
+
+
 class VmDeletionAuditResult(BaseModel):
     """Output schema for the VmDeletionAuditorAgent."""
-    deleted_vms: list[dict] = Field(
-        description="List of deleted VMs. Each dict contains: vm_name, deleted_by, deletion_timestamp, zone, project_id"
+    deleted_vms: list[DeletedVm] = Field(
+        description="List of deleted VMs."
     )
     total_deletions: int = Field(
         description="Total number of VM deletions found"
@@ -138,3 +195,4 @@ class VmDeletionAuditResult(BaseModel):
         default=None,
         description="Username filter if query was filtered by specific user"
     )
+

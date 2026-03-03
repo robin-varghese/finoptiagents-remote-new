@@ -402,15 +402,49 @@ if prompt:
             is_chart_rendered = False
             
             try:
-                # First, try to load the entire response as JSON.
+                # 1. First, try to load the entire response as JSON.
                 parsed_json = json.loads(final_response)
                 
-                if isinstance(parsed_json, dict) and "data" in parsed_json and "layout" in parsed_json:
-                    fig = go.Figure(parsed_json)
-                    st.plotly_chart(fig)
-                    final_content_to_store = fig
-                    is_chart_rendered = True
-            
+                # --- NEW: Enhanced Rendering for FinOps Schemas ---
+                if isinstance(parsed_json, dict):
+                    # Check for Chart JSON (Plotly)
+                    if "data" in parsed_json and "layout" in parsed_json:
+                        fig = go.Figure(parsed_json)
+                        st.plotly_chart(fig)
+                        final_content_to_store = fig
+                        is_chart_rendered = True
+                    
+                    # Check for Budget Variance results
+                    elif "projects_at_risk" in parsed_json:
+                        st.subheader("📊 Budget Variance Analysis")
+                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()} | **Total Analyzed:** {parsed_json.get('total_projects_analyzed', 'N/A')}")
+                        import pandas as pd
+                        df = pd.DataFrame(parsed_json["projects_at_risk"])
+                        st.table(df)
+                        is_chart_rendered = True
+                    
+                    # Check for Compliance results
+                    elif "non_compliant_projects" in parsed_json:
+                        st.subheader("🛡️ Compliance Audit")
+                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()}")
+                        st.error(f"Found {len(parsed_json['non_compliant_projects'])} non-compliant projects.")
+                        st.write("**Issues identified:**")
+                        for action in parsed_json.get("recommended_actions", []):
+                            st.info(action)
+                        is_chart_rendered = True
+
+                    # Check for Utilization results
+                    elif "anomalous_environments" in parsed_json or "low_utilization_resources" in parsed_json:
+                        st.subheader("📈 Utilization Insights")
+                        if "anomalous_environments" in parsed_json and parsed_json["anomalous_environments"]:
+                            st.write("**Anomalous Environments (Lower > Prod Cost):**")
+                            st.table(parsed_json["anomalous_environments"])
+                        if "low_utilization_resources" in parsed_json and parsed_json["low_utilization_resources"]:
+                            st.write("**Low Utilization Resources (<50%):**")
+                            st.table(parsed_json["low_utilization_resources"])
+                        st.success(f"Estimated Potential Savings: ${parsed_json.get('total_potential_savings', 0):,.2f}")
+                        is_chart_rendered = True
+                
             except json.JSONDecodeError:
                 # Fallback to searching for a JSON block within the text.
                 json_match = re.search(r'\{.*\}', final_response, re.DOTALL)
@@ -427,8 +461,14 @@ if prompt:
                             st.plotly_chart(fig)
                             final_content_to_store = fig
                             is_chart_rendered = True
+                        elif isinstance(parsed_json, dict) and "projects_at_risk" in parsed_json:
+                            intro_text = final_response[:json_match.start()].strip()
+                            if intro_text: st.markdown(intro_text)
+                            st.table(parsed_json["projects_at_risk"])
+                            is_chart_rendered = True
                     except json.JSONDecodeError:
                         pass
+
 
             if not is_chart_rendered:
                 st.markdown(final_response)
