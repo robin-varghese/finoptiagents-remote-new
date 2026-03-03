@@ -1,0 +1,307 @@
+Starting FinOptiAgents Playground...
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8502
+  Network URL: http://192.168.1.92:8502
+
+--- Loading configuration ---
+2025-12-23 16:47:18 - root - INFO - Successfully fetched secret: 'google-project-id'
+2025-12-23 16:47:18 - root - INFO - Using Project ID: vector-search-poc
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'google-api-key'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'google-zone'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'remote-cpu-agent-resource-name'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'remote-rag-agent-resource-name'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'rag-earb-designdocs'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'rag-engine-location'
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'bigquery-dataset-id'
+2025-12-23 16:47:19 - root - WARNING - Secret 'bigquery-agent-analytics-table-id' not found in project 'vector-search-poc'.
+2025-12-23 16:47:19 - root - INFO - Successfully fetched secret: 'finoptiagents-llm'
+2025-12-23 16:47:19 - root - INFO - --- Configuration loading complete. ---
+2025-12-23 16:47:19 - root - INFO - Initializing Vertex AI for project 'vector-search-poc' in region 'us-east4'...
+2025-12-23 16:47:19 - root - INFO - Vertex AI initialized successfully.
+2025-12-23 16:47:19 - root - INFO - Google API Key set as environment variable.
+--- Loading configuration ---
+2025-12-23 16:47:20 - root - INFO - Successfully fetched secret: 'google-project-id'
+2025-12-23 16:47:20 - root - INFO - Using Project ID: vector-search-poc
+2025-12-23 16:47:20 - root - INFO - Successfully fetched secret: 'google-api-key'
+2025-12-23 16:47:20 - root - INFO - Successfully fetched secret: 'google-zone'
+2025-12-23 16:47:21 - root - INFO - Successfully fetched secret: 'remote-cpu-agent-resource-name'
+2025-12-23 16:47:21 - root - INFO - Successfully fetched secret: 'remote-rag-agent-resource-name'
+2025-12-23 16:47:21 - root - INFO - Successfully fetched secret: 'rag-earb-designdocs'
+2025-12-23 16:47:21 - root - INFO - Successfully fetched secret: 'rag-engine-location'
+2025-12-23 16:47:21 - root - INFO - --- Configuration loading complete. ---
+2025-12-23 16:47:21 - root - INFO - Initializing Vertex AI for project 'vector-search-poc' in region 'us-east4'...
+2025-12-23 16:47:21 - root - INFO - Vertex AI initialized successfully.
+2025-12-23 16:47:21 - root - INFO - Google API Key set as environment variable.
+/Users/robinkv/dev_workplace/all_codebase/finoptiagents_remote_new/finoptiagents-remote-new/app/agent.py:343: UserWarning: [EXPERIMENTAL] ReflectAndRetryToolPlugin: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  ReflectAndRetryToolPlugin(max_retries=3),
+2025-12-23 16:47:21 - app.agent - INFO - Agent and App created successfully.
+2025-12-23 16:47:21,371 - INFO - root - Logging configured at level: INFO
+2025-12-23 16:47:21,372 - INFO - __main__ - ================================================================================
+2025-12-23 16:47:21,372 - INFO - __main__ - 🚀 FinOptiAgents Playground Starting...
+2025-12-23 16:47:21,372 - INFO - __main__ - ================================================================================
+2025-12-23 16:47:21,610 - INFO - __main__ - Session User ID set to: robin@cloudroaster.com
+2025-12-23 16:47:21,711 - WARNING - dotenv.main - python-dotenv could not parse statement starting at line 23
+2025-12-23 16:47:21,779 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:47:25,960 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:47:26,104 - ERROR - asyncio - Task was destroyed but it is pending!
+task: <Task pending name='Task-55' coro=<AsyncClient.aclose() running at /Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/site-packages/google/genai/client.py:96>>
+2025-12-23 16:47:31,635 - INFO - root - Logging configured at level: INFO
+2025-12-23 16:47:31,636 - INFO - __main__ - ================================================================================
+2025-12-23 16:47:31,636 - INFO - __main__ - 🚀 FinOptiAgents Playground Starting...
+2025-12-23 16:47:31,636 - INFO - __main__ - ================================================================================
+2025-12-23 16:47:32,025 - INFO - __main__ - Session User ID set to: robin@cloudroaster.com
+2025-12-23 16:47:32,027 - WARNING - dotenv.main - python-dotenv could not parse statement starting at line 23
+2025-12-23 16:47:32,030 - INFO - root - User input received: 'Run all the finops recommenders and provide the list of resources which can be optimised. It would be great if you can tell me which recommenders were used for the report'
+/Users/robinkv/dev_workplace/all_codebase/finoptiagents_remote_new/finoptiagents-remote-new/app/playground.py:331: UserWarning: [EXPERIMENTAL] ReflectAndRetryToolPlugin: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  ReflectAndRetryToolPlugin(max_retries=3),
+2025-12-23 16:47:32,031 - INFO - google_adk.google.adk.plugins.plugin_manager - Plugin 'reflect_retry_tool_plugin' registered.
+2025-12-23 16:47:32,031 - INFO - google_adk.google.adk.plugins.plugin_manager - Plugin 'BigQueryAgentAnalyticsPlugin' registered.
+2025-12-23 16:47:32,033 - INFO - root - Before model call for agent: finops_optimization_agent
+2025-12-23 16:47:32,033 - INFO - root - Inspecting last user message for 'finops_optimization_agent': 'Run all the finops recommenders and provide the list of resources which can be optimised. It would be great if you can tell me which recommenders were used for the report'
+2025-12-23 16:47:32,033 - INFO - root - Proceeding with LLM call for agent 'finops_optimization_agent'.
+2025-12-23 16:47:32,069 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:47:33,908 - INFO - root - BQ Plugin: Dataset finoptiagents and Table agent_analytics_log ensured to exist.
+2025-12-23 16:47:33,916 - INFO - root - BQ Plugin: Initialized successfully.
+2025-12-23 16:47:34,055 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:47:34,056 - WARNING - google_genai.types - Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+2025-12-23 16:47:34,059 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:34,059 - INFO - root - Event Content Role: model
+2025-12-23 16:47:34,059 - INFO - root - Event Content Parts: [Part(
+  function_call=FunctionCall(
+    args={
+      'agent_name': 'gcloud_recommender_agent'
+    },
+    id='adk-9af8ebb9-c400-4318-964b-f3fa38c1fbef',
+    name='transfer_to_agent'
+  ),
+  thought_signature=b'\x12\x87\x05\n\x84\x05\x01r\xc8\xda|\x88]*\x0eW\x07w\xe2?\x03]\x86\x8f\x07\xc2\xd9#\xf5\xeeV\x19<\xee\x12\xaf\xd2{c\x1f\xb4P\x88\xe1\xb6\x07\x9c\\Ld\xab\x9d/w\xd4\x03_3\x02u^\xc3\tm0\xba\x18:Z\x0c\xc97\xbf\x8a\xcd\xdf/\x0f\xe9q\xd3\xbf\xc2b\xe0\x1bL\xd0i\xb1\xe1^\xc4\\&\xd1\xd3...'
+)]
+2025-12-23 16:47:34,065 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:34,065 - INFO - root - Event Content Role: user
+2025-12-23 16:47:34,065 - INFO - root - Event Content Parts: [Part(
+  function_response=FunctionResponse(
+    id='adk-9af8ebb9-c400-4318-964b-f3fa38c1fbef',
+    name='transfer_to_agent',
+    response={
+      'result': None
+    }
+  )
+)]
+2025-12-23 16:47:34,116 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:47:36,735 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:47:36,737 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:36,737 - INFO - root - Event Content Role: model
+2025-12-23 16:47:36,737 - INFO - root - Event Content Parts: [Part(
+  function_call=FunctionCall(
+    args={
+      'args': [
+        'config',
+        'get-value',
+        'project',
+      ]
+    },
+    id='adk-80c19350-85a4-4597-a297-a407d9cc48cc',
+    name='run_gcloud_command'
+  ),
+  thought_signature=b"\x12\x9b\n\n\x98\n\x01r\xc8\xda|\x8d\xa3\x0bO\x01\x88^\x9f\xb5]\x88\x1b\x05\x10\x8cC\x8f\x8f\xa2\xc3\xd1l\x14\x12U\x85j\x93\xb7\x05\xcf\xf0\xe1\xf0\x04\x83\x87p\xfd\xb3\xf8\xe1\xdc\x1bX\xd5P\xb4\x82\xbbs\xe1'\xb4\x08B\x89\xd5\x94\xdf\xa6\xbcF\xc9\xad\x9b\x0f\xe8.\x95\xbf\x9d\x99\xf4IU\x9f\x90\x87\xa7\xf9\xe0\xe4\xfd\x0c\xc6...'
+)]
+2025-12-23 16:47:36,738 - INFO - app.tools.gcloud_mcp_tools - Executing gcloud command: gcloud config get-value project
+2025-12-23 16:47:36,738 - INFO - mcp_server.external.mcp_client - Connecting to MCP server: gcloud-mcp-image
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1766508456.745127 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+[2025-12-23T16:47:40.652Z] INFO: 🚀 gcloud mcp server started
+2025-12-23 16:47:40,671 - INFO - mcp_server.external.mcp_client - Connected to MCP server: gcloud-mcp-image
+2025-12-23 16:47:40,672 - INFO - mcp_server.external.mcp_client - Calling tool 'run_gcloud_command' on gcloud-mcp-image
+[2025-12-23T16:47:41.014Z] INFO: Executing run_gcloud_command | {"tool":"run_gcloud_command","input":["config","get-value","project"]}
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.7.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+npm notice To update run: npm install -g npm@11.7.0
+npm notice
+2025-12-23 16:47:41,466 - INFO - mcp_server.external.mcp_client - Disconnected from MCP server: gcloud-mcp-image
+2025-12-23 16:47:41,470 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:41,470 - INFO - root - Event Content Role: user
+2025-12-23 16:47:41,470 - INFO - root - Event Content Parts: [Part(
+  function_response=FunctionResponse(
+    id='adk-80c19350-85a4-4597-a297-a407d9cc48cc',
+    name='run_gcloud_command',
+    response={
+      'result': """vector-search-poc
+"""
+    }
+  )
+)]
+2025-12-23 16:47:41,512 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:47:42,484 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:47:42,487 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:42,487 - INFO - root - Event Content Role: model
+2025-12-23 16:47:42,487 - INFO - root - Event Content Parts: [Part(
+  function_call=FunctionCall(
+    args={
+      'project_id': 'vector-search-poc'
+    },
+    id='adk-bf24fdf4-eb19-47be-996d-d742269e9797',
+    name='scan_cost_recommendations'
+  ),
+  thought_signature=b'\x12\x98\x01\n\x95\x01\x01r\xc8\xda|\x86^\x97\xd2\xf0\x8f\x12\x7f\x08~P\xcd\x82\xe0"gNA\xdb5\xd7o"\x9a^\x15\x8a\xf8\xf2\xd5Ih\xc7\xa3\\\xc7\xff\xc1\xfe?-\tS\x18\xb8]\x90\xfc\xa3>\x13\xf5\x176\x19\xfa\x80\xbd\xa7K\xd3\xa3\xf2\xb7q\xc3\x18\xa6\xf3\x18\x8f*\xd2\x89J\xd7JDZ\x02b\xc8y\x843\x1b...'
+)]
+2025-12-23 16:47:42,502 - INFO - root - 🔍 [Recommender Scan] Starting scan details...
+2025-12-23 16:47:42,502 - INFO - root -    [Scan] Discovering active VM regions...
+I0000 00:00:1766508464.494099 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:45,552 - INFO - root -    [Scan] Discovering active Address regions...
+I0000 00:00:1766508465.552986 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:46,339 - INFO - root -    [Scan] Targeted locations: {'us-central1-a', 'us-central1', 'global'}
+2025-12-23 16:47:46,339 - INFO - root -    [Scan] Checking google.compute.instance.IdleResourceRecommender in us-central1-a...
+I0000 00:00:1766508466.340322 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:46,850 - INFO - root -    [Scan] Checking google.compute.instance.MachineTypeRecommender in us-central1-a...
+I0000 00:00:1766508466.850722 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:47,383 - INFO - root -    [Scan] Checking google.compute.address.IdleResourceRecommender in us-central1...
+I0000 00:00:1766508467.383574 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:47,908 - INFO - root -    [Scan] Checking google.compute.address.IdleResourceRecommender in global...
+I0000 00:00:1766508467.908735 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:48,444 - INFO - root -    [Scan] Checking google.compute.disk.IdleResourceRecommender in global...
+I0000 00:00:1766508468.444934 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:48,921 - INFO - root -    [Scan] Checking google.compute.image.IdleResourceRecommender in global...
+I0000 00:00:1766508468.922288 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:49,435 - INFO - root -    [Scan] Checking google.compute.commitment.UsageCommitmentRecommender in us-central1...
+I0000 00:00:1766508469.435568 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:49,954 - INFO - root -    [Scan] Checking google.compute.instanceGroupManager.MachineTypeRecommender in us-central1-a...
+I0000 00:00:1766508469.954521 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:50,450 - INFO - root -    [Scan] Checking google.cloudsql.instance.IdleRecommender in us-central1...
+I0000 00:00:1766508470.451470 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:50,981 - INFO - root -    [Scan] Checking google.cloudsql.instance.OverprovisionedRecommender in us-central1...
+I0000 00:00:1766508470.981604 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:51,499 - INFO - root -    [Scan] Checking google.cloudsql.instance.UnderprovisionedRecommender in us-central1...
+I0000 00:00:1766508471.500398 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:52,016 - INFO - root -    [Scan] Checking google.run.service.CostRecommender in us-central1...
+I0000 00:00:1766508472.017181 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:52,523 - INFO - root -    [Scan] Checking google.container.DiagnosisRecommender in us-central1-a...
+I0000 00:00:1766508472.523994 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:53,086 - INFO - root -    [Scan] Checking google.cloudbilling.commitment.SpendBasedCommitmentRecommender in global...
+I0000 00:00:1766508473.086805 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:53,397 - INFO - root -    [Scan] Checking google.resourcemanager.projectUtilization.Recommender in global...
+I0000 00:00:1766508473.397936 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:47:53,905 - INFO - root - 🔍 [Recommender Scan] Complete. Total Savings Identified: $0.0
+2025-12-23 16:47:53,907 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:53,907 - INFO - root - Event Content Role: user
+2025-12-23 16:47:53,907 - INFO - root - Event Content Parts: [Part(
+  function_response=FunctionResponse(
+    id='adk-bf24fdf4-eb19-47be-996d-d742269e9797',
+    name='scan_cost_recommendations',
+    response={
+      'result': """{
+  "status": "success",
+  "total_potential_savings_usd": 0.0,
+  "recommendation_count": 0,
+  "details": []
+}"""
+    }
+  )
+)]
+2025-12-23 16:47:53,942 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:47:55,577 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:47:55,579 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:55,579 - INFO - root - Event Content Role: model
+2025-12-23 16:47:55,580 - INFO - root - Event Content Parts: [Part(
+  function_call=FunctionCall(
+    args={
+      'args': [
+        'projects',
+        'list',
+        '--format=value(projectId)',
+      ]
+    },
+    id='adk-8e301960-c0de-4076-87bc-afb56c209103',
+    name='run_gcloud_command'
+  ),
+  thought_signature=b'\x12\xcc\x04\n\xc9\x04\x01r\xc8\xda|8\xff\x16\x96\x80@\xb6i\xdd\x15W|\x10\xe7\xb4\xa7\x9d\xf9I\xcb\xbd\x8fe\x01,\x96\x14+\xdde~\xa1\x9f\xe1A&\x97\x9a\x1f\x81\x82L\xc6\xcd\xa3>}\xc3\r!\ng\xe2\x95Y\xfc\xc5J3\xd7\xbaA6\xac\xb5?\x02;\x86E\r1\xa8\xa1cZ\x93\xdcR\xce\x11t\xf1\x8d\xf8\xf3...'
+)]
+2025-12-23 16:47:55,581 - INFO - app.tools.gcloud_mcp_tools - Executing gcloud command: gcloud projects list --format=value(projectId)
+2025-12-23 16:47:55,582 - INFO - mcp_server.external.mcp_client - Connecting to MCP server: gcloud-mcp-image
+I0000 00:00:1766508475.583314 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+[2025-12-23T16:47:58.252Z] INFO: 🚀 gcloud mcp server started
+2025-12-23 16:47:58,257 - INFO - mcp_server.external.mcp_client - Connected to MCP server: gcloud-mcp-image
+2025-12-23 16:47:58,257 - INFO - mcp_server.external.mcp_client - Calling tool 'run_gcloud_command' on gcloud-mcp-image
+[2025-12-23T16:47:58.495Z] INFO: Executing run_gcloud_command | {"tool":"run_gcloud_command","input":["projects","list","--format=value(projectId)"]}
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.7.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+npm notice To update run: npm install -g npm@11.7.0
+npm notice
+2025-12-23 16:47:59,259 - INFO - mcp_server.external.mcp_client - Disconnected from MCP server: gcloud-mcp-image
+2025-12-23 16:47:59,261 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:47:59,261 - INFO - root - Event Content Role: user
+2025-12-23 16:47:59,261 - INFO - root - Event Content Parts: [Part(
+  function_response=FunctionResponse(
+    id='adk-8e301960-c0de-4076-87bc-afb56c209103',
+    name='run_gcloud_command',
+    response={
+      'result': """ncbi-blast-poc
+vector-search-poc
+lab-01-iac-cldbuild-tf-gitops
+tork-blockchain-platform
+"""
+    }
+  )
+)]
+2025-12-23 16:47:59,299 - INFO - google_adk.google.adk.models.google_llm - Sending out request, model: gemini-3-flash-preview, backend: GoogleLLMVariant.GEMINI_API, stream: False
+2025-12-23 16:48:00,899 - INFO - google_adk.google.adk.models.google_llm - Response received from the model.
+2025-12-23 16:48:00,901 - INFO - root - Runner Event received: <class 'google.adk.events.event.Event'>
+2025-12-23 16:48:00,902 - INFO - root - Event Content Role: model
+2025-12-23 16:48:00,902 - INFO - root - Event Content Parts: [Part(
+  function_call=FunctionCall(
+    args={
+      'project_id': 'ncbi-blast-poc'
+    },
+    id='adk-423eeeb2-2fb5-49e6-8171-4ee2db6a5bd3',
+    name='scan_cost_recommendations'
+  ),
+  thought_signature=b'\x12\x9e\x02\n\x9b\x02\x01r\xc8\xda|\xf7\xc5\xca*\xc2\\\xfe\xae3\x08\xef\x96\x14\xaf\xb7\xbd\x86!\x9eSK)\xc5\x1b\xc3RS\xc7X\xfb\xae\x8f%}a\xf7\xabG\x94Y\xc7g\xfe\xc3&-\xc7\xc2\xb1\xfc\x18\xef\xd6\x08\x86\xe4\xfd\x16>\x1enM\x14\x9dV\xd3K\r\xfd\x97\xfe\xe9\n\xc2\xad\xeeT\xd8z\x18\xc5\x98\x9e\xd2l\x8e...'
+), Part(
+  function_call=FunctionCall(
+    args={
+      'project_id': 'lab-01-iac-cldbuild-tf-gitops'
+    },
+    id='adk-0a98d757-38bb-426b-a95a-2ece69ea53bf',
+    name='scan_cost_recommendations'
+  )
+), Part(
+  function_call=FunctionCall(
+    args={
+      'project_id': 'tork-blockchain-platform'
+    },
+    id='adk-59d23470-bf8a-400f-a696-0245407abfae',
+    name='scan_cost_recommendations'
+  )
+)]
+2025-12-23 16:48:00,906 - INFO - root - 🔍 [Recommender Scan] Starting scan details...
+2025-12-23 16:48:00,906 - INFO - root -    [Scan] Discovering active VM regions...
+I0000 00:00:1766508480.906912 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:48:01,824 - INFO - root -    [Scan] Discovering active Address regions...
+I0000 00:00:1766508481.825160 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+2025-12-23 16:48:02,670 - INFO - root -    [Scan] Targeted locations: {'us-central1-a', 'us-central1', 'global'}
+2025-12-23 16:48:02,670 - INFO - root -    [Scan] Checking google.compute.instance.IdleResourceRecommender in us-central1-a...
+I0000 00:00:1766508482.670818 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+  Stopping...
+2025-12-23 16:54:11,438 - INFO - root -    [Scan] Checking google.compute.instance.MachineTypeRecommender in us-central1-a...
+I0000 00:00:1766508851.439565 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+  Stopping...
+Exception ignored in: <module 'threading' from '/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/threading.py'>
+Traceback (most recent call last):
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/threading.py", line 1590, in _shutdown
+    lock.acquire()
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/site-packages/streamlit/web/bootstrap.py", line 42, in signal_handler
+    server.stop()2025-12-23 16:54:20,087 - INFO - root -    [Scan] Checking google.compute.address.IdleResourceRecommender in us-central1...
+
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/site-packages/streamlit/web/server/server.py", line 519, in stop
+I0000 00:00:1766508860.088403 8577643 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+    self._runtime.stop()
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/site-packages/streamlit/runtime/runtime.py", line 343, in stop
+    async_objs.eventloop.call_soon_threadsafe(stop_on_eventloop)
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/asyncio/base_events.py", line 807, in call_soon_threadsafe
+    self._check_closed()
+  File "/Users/robinkv/miniconda3/envs/googleagentdevkit-new-nov-2025/lib/python3.11/asyncio/base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed

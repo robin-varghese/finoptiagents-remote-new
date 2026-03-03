@@ -95,7 +95,7 @@ root_agent_instruction="""You are a comprehensive Google Cloud FinOps assistant 
     When a user asks for a graph, you MUST follow this two-step process:
     1.  **GET DATA:** Use `run_bq_query` to get data from `project_health_summary_v`.
         - Example Query for Bar Chart: `SELECT project_name, total_monthly_cost FROM `vector-search-poc.finoptiagents.project_health_summary_v`;`
-        - Example Query for Line Chart: `SELECT month, project_name, total_cost FROM `vector-search-poc.finoptiagents.finops_cost_usage`;`
+        - Example Query for Line Chart: `SELECT month, project_name, monthly_cost FROM `vector-search-poc.finoptiagents.finops_cost_usage`;`
     2.  **GENERATE CHART:** Use `generate_chart_from_data`.
         - The `y_columns` parameter **MUST be a list of strings**, even if there is only one column.
         - **Example Call for Bar Chart:**
@@ -112,7 +112,7 @@ root_agent_instruction="""You are a comprehensive Google Cloud FinOps assistant 
             `data_json_string='[...data...]',`
             `title='Monthly Cloud Spend Trend by Project',`
             `x_column='month',`
-            `y_columns=['total_cost'],`
+            `y_columns=['monthly_cost'],`
             `color_column='project_name'`
           `)`
 

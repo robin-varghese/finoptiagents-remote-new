@@ -12,6 +12,7 @@ from google.adk.models import LlmRequest, LlmResponse
 from google.genai import types
 from . import descandinstructions
 from . import schemas
+from app import config
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ def simple_before_model_modifier(
 # --- Budget Variance Agent ---
 budget_variance_agent = LlmAgent(
     name="budget_variance_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.budget_variance_agent_description,
     instruction=descandinstructions.budget_variance_agent_instruction,
     tools=[run_bq_query],
@@ -126,7 +127,7 @@ budget_variance_agent = LlmAgent(
 # --- Compliance Auditor Agent ---
 compliance_auditor_agent = LlmAgent(
     name="compliance_auditor_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.compliance_auditor_agent_description,
     instruction=descandinstructions.compliance_auditor_agent_instruction,
     tools=[run_bq_query],
@@ -136,7 +137,7 @@ compliance_auditor_agent = LlmAgent(
 # --- Utilization Analyst Agent ---
 utilization_analyst_agent = LlmAgent(
     name="utilization_analyst_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.utilization_analyst_agent_description,
     instruction=descandinstructions.utilization_analyst_agent_instruction,
     tools=[run_bq_query],
@@ -146,7 +147,7 @@ utilization_analyst_agent = LlmAgent(
 # --- Optimization Scout Agent (BigQuery-based) ---
 optimization_scout_agent = LlmAgent(
     name="optimization_scout_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.optimization_scout_agent_description,
     instruction=descandinstructions.optimization_scout_agent_instruction,
     tools=[run_bq_query],
@@ -156,7 +157,7 @@ optimization_scout_agent = LlmAgent(
 # --- Environment Readiness Agent ---
 environment_readiness_agent = LlmAgent(
     name="environment_readiness_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.environment_readiness_agent_description,
     instruction=descandinstructions.environment_readiness_agent_instruction,
     tools=[run_bq_query],
@@ -166,7 +167,7 @@ environment_readiness_agent = LlmAgent(
 # --- GCloud Recommender Agent (NEW) ---
 gcloud_recommender_agent = LlmAgent(
     name="gcloud_recommender_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.gcloud_recommender_agent_description,
     instruction=descandinstructions.gcloud_recommender_agent_instruction,
     tools=[run_gcloud_command, scan_cost_recommendations],
@@ -175,7 +176,7 @@ gcloud_recommender_agent = LlmAgent(
 # --- FinOps Analytics Manager (Coordinates all specialists) ---
 finops_analytics_manager = LlmAgent(
     name="finops_analytics_manager",
-    model="gemini-2.5-flash",  # Using Pro for better aggregation capabilities
+    model=config.FINOPTIAGENTS_LLM,  # Using Pro for better aggregation capabilities
     description=descandinstructions.finops_analytics_manager_description,
     instruction=descandinstructions.finops_analytics_manager_instruction,
     sub_agents=[
@@ -191,7 +192,7 @@ finops_analytics_manager = LlmAgent(
 # --- Escalation Agent (Converts findings to actions) ---
 escalation_agent = LlmAgent(
     name="escalation_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.escalation_agent_description,
     instruction=descandinstructions.escalation_agent_instruction,
     tools=[send_email],  # ServiceNow integration to be added later
@@ -200,7 +201,7 @@ escalation_agent = LlmAgent(
 # --- Log Savings Impact Agent (NEW) ---
 log_savings_impact_agent = LlmAgent(
     name="log_savings_impact_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.compliance_logger_agent_description, # Keep old description for now
     instruction=descandinstructions.compliance_logger_agent_instruction, # Keep old instruction for now
     tools=[log_savings_impact],
@@ -214,14 +215,14 @@ log_savings_impact_agent = LlmAgent(
 
 greeting_agent = LlmAgent(
     name="Greeter",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.greeting_agent_description,
     instruction=descandinstructions.greeting_agent_instruction
 )
 
 gcloud_ops_agent = LlmAgent(
     name="gcloud_ops_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.gcloud_ops_agent_description,
     instruction=descandinstructions.gcloud_ops_agent_instruction,
     tools=[run_gcloud_command],
@@ -229,7 +230,7 @@ gcloud_ops_agent = LlmAgent(
 
 monitoring_agent = LlmAgent(
     name="monitoring_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.monitoring_agent_description,
     instruction=descandinstructions.monitoring_agent_instruction,
     tools=[query_time_series, query_logs, list_metrics],
@@ -277,7 +278,7 @@ ROOT_TOOLS = [
 # --- BQ Auditor Agent (NEW) ---
 bq_auditor_agent = LlmAgent(
     name="bq_auditor_agent",
-    model="gemini-2.5-flash",
+    model=config.FINOPTIAGENTS_LLM,
     description=descandinstructions.bq_auditor_agent_description,
     instruction=descandinstructions.bq_auditor_agent_instruction,
     tools=[run_bq_query],
@@ -288,7 +289,7 @@ try:
     design_compliance_check_rag_agent = Agent(
         name="design_compliance_check_rag_agent",
         # Using Gemini 2.5 Flash for best performance with RAG operations
-        model="gemini-2.5-flash",
+        model=config.FINOPTIAGENTS_LLM,
         description=descandinstructions.rag_agent_description,
         tools=ALL_TOOLS,  # Direct tool imports (no MCP subprocess)
         instruction=descandinstructions.rag_agent_instruction,
@@ -300,7 +301,7 @@ try:
         # IMPORTANT: Bidirectional streaming requires a model that supports this feature,
         # often a "Live" or "Express" version. The name below is an example;
         # you must use the specific model name provided for this capability.
-        model="gemini-2.5-flash",
+        model=config.FINOPTIAGENTS_LLM,
         description=descandinstructions.root_agent_description,
         instruction=(descandinstructions.root_agent_instruction),
         # --- SOLUTION: Move the agent from 'tools' to 'sub_agents' ---
@@ -329,10 +330,10 @@ try:
 
     # --- Initialize and attach the new analytics plugin ---
     analytics_plugin = BigQueryAgentAnalyticsPlugin(
-        project_id="vector-search-poc",
-        dataset_id="finoptiagents",
-        table_id="agent_analytics_log",
-        location="us-central1"
+        project_id=config.GOOGLE_PROJECT_ID,
+        dataset_id=config.BIGQUERY_DATASET_ID,
+        table_id=config.BIGQUERYAGENTANALYTICSPLUGIN_TABLE_ID,
+        location=config.GOOGLE_ZONE
     )
 
     finops_app = App(

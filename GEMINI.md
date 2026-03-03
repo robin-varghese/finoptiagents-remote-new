@@ -136,7 +136,7 @@ def get_current_time(city: str) -> dict:
 
 my_first_llm_agent = Agent(
     name="time_teller_agent",
-    model="gemini-2.5-flash", # Essential: The LLM powering the agent
+    model="gemini-3-flash-preview", # Essential: The LLM powering the agent
     instruction="You are a helpful assistant that tells the current time in cities. Use the 'get_current_time' tool for this purpose.",
     description="Tells the current time in a specified city.", # Crucial for multi-agent delegation
     tools=[get_current_time] # List of callable functions/tool instances
@@ -210,7 +210,7 @@ This is the most reliable way to make an LLM produce predictable, parseable JSON
     ```python
     research_evaluator = LlmAgent(
         name="research_evaluator",
-        model="gemini-2.5-flash",
+        model="gemini-3-flash-preview",
         instruction="""You are a meticulous quality assurance analyst. Evaluate the research findings in 'section_research_findings' and be very critical.
         If you find significant gaps, assign a grade of 'fail', write a detailed comment, and generate 5-7 specific follow-up queries.
         If the research is thorough, grade it 'pass'.
@@ -236,7 +236,7 @@ This is the most reliable way to make an LLM produce predictable, parseable JSON
     from google.adk.code_executors import BuiltInCodeExecutor
     agent = Agent(
         name="code_agent",
-        model="gemini-2.5-flash",
+        model="gemini-3-flash-preview",
         instruction="Write and execute Python code to solve math problems.",
         executor=[BuiltInCodeExecutor] # Allows agent to run Python code
     )
@@ -264,7 +264,7 @@ from google.adk.tools import google_search
 
 
 plan_generator = LlmAgent(
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     name="plan_generator",
     description="Generates a 4-5 line action-oriented research plan.",
     instruction=f"""
@@ -286,7 +286,7 @@ plan_generator = LlmAgent(
 This agent's `instruction` relies on data placed in `session.state` by previous agents.
 ```python
 report_composer = LlmAgent(
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     name="report_composer_with_citations",
     include_contents="none", # History not needed; all data is injected.
     description="Transforms research data and a markdown outline into a final, cited report.",
@@ -332,7 +332,7 @@ from google.adk.agents import SequentialAgent, Agent
 # Agent 1: Summarizes a document and saves to state
 summarizer = Agent(
     name="DocumentSummarizer",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     instruction="Summarize the provided document in 3 sentences.",
     output_key="document_summary" # Output saved to session.state['document_summary']
 )
@@ -340,7 +340,7 @@ summarizer = Agent(
 # Agent 2: Generates questions based on the summary from state
 question_generator = Agent(
     name="QuestionGenerator",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     instruction="Generate 3 comprehension questions based on this summary: {document_summary}",
     # 'document_summary' is dynamically injected from session.state
 )
@@ -367,7 +367,7 @@ fetch_social_sentiment = Agent(name="SentimentAnalyzer", ..., output_key="sentim
 # Agent to merge results (runs after ParallelAgent, usually in a SequentialAgent)
 merger_agent = Agent(
     name="ReportGenerator",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     instruction="Combine stock data: {stock_data}, news: {news_data}, and sentiment: {sentiment_data} into a market report."
 )
 
@@ -522,7 +522,7 @@ research_pipeline = SequentialAgent(
 # The top-level agent that interacts with the user.
 interactive_planner_agent = LlmAgent(
     name="interactive_planner_agent",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     description="The primary research assistant. It collaborates with the user to create a research plan, and then executes it upon approval.",
     instruction="""
     You are a research planning assistant. Your workflow is:
@@ -612,12 +612,12 @@ ADK's model flexibility allows integrating various LLMs for different needs.
 *   **AI Studio (Easy Start)**:
     *   Set `GOOGLE_API_KEY="YOUR_API_KEY"` (environment variable).
     *   Set `GOOGLE_GENAI_USE_VERTEXAI="False"`.
-    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-flash"`, etc.
+    *   Model strings: `"gemini-3-flash-preview"`, `"gemini-3-flash-preview"`, etc.
 *   **Vertex AI (Production)**:
     *   Authenticate via `gcloud auth application-default login` (recommended).
     *   Set `GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"`, `GOOGLE_CLOUD_LOCATION="your-region"` (environment variables).
     *   Set `GOOGLE_GENAI_USE_VERTEXAI="True"`.
-    *   Model strings: `"gemini-2.5-flash"`, `"gemini-2.5-flash"`, or full Vertex AI endpoint resource names for specific deployments.
+    *   Model strings: `"gemini-3-flash-preview"`, `"gemini-3-flash-preview"`, or full Vertex AI endpoint resource names for specific deployments.
 
 ### 6.2 Other Cloud & Proprietary Models via LiteLLM
 
@@ -1081,7 +1081,7 @@ Multi-layered defense against harmful content, misalignment, and unsafe actions.
         ```python
         def safety_checker_callback(context: CallbackContext, llm_request: LlmRequest) -> Optional[LlmResponse]:
             # Use a separate, small LLM to classify safety
-            safety_llm_agent = Agent(name="SafetyChecker", model="gemini-2.5-flash-001", instruction="Classify input as 'safe' or 'unsafe'. Output ONLY the word.")
+            safety_llm_agent = Agent(name="SafetyChecker", model="gemini-3-flash-preview", instruction="Classify input as 'safe' or 'unsafe'. Output ONLY the word.")
             # Run the safety agent (might need a new runner instance or direct model call)
             # For simplicity, a mock:
             user_input = llm_request.contents[-1].parts[0].text
@@ -1140,7 +1140,7 @@ Multi-layered defense against harmful content, misalignment, and unsafe actions.
 ADK (especially with Gemini Live API models) supports richer interactions.
 
 *   **Audio**: Input via `Blob(mime_type="audio/pcm", data=bytes)`, Output via `genai_types.SpeechConfig` in `RunConfig`.
-*   **Vision (Images/Video)**: Input via `Blob(mime_type="image/jpeg", data=bytes)` or `Blob(mime_type="video/mp4", data=bytes)`. Models like `gemini-2.5-flash` can process these.
+*   **Vision (Images/Video)**: Input via `Blob(mime_type="image/jpeg", data=bytes)` or `Blob(mime_type="video/mp4", data=bytes)`. Models like `gemini-3-flash-preview` can process these.
 *   **Multimodal Input in `Content`**:
     ```python
     multimodal_content = genai_types.Content(
@@ -1156,7 +1156,7 @@ ADK (especially with Gemini Live API models) supports richer interactions.
 
 ## 16. Performance Optimization
 
-*   **Model Selection**: Choose the smallest model that meets requirements (e.g., `gemini-2.5-flash` for simple tasks).
+*   **Model Selection**: Choose the smallest model that meets requirements (e.g., `gemini-3-flash-preview` for simple tasks).
 *   **Instruction Prompt Engineering**: Concise, clear instructions reduce tokens and improve accuracy.
 *   **Tool Use Optimization**:
     *   Design efficient tools (fast API calls, optimize database queries).
@@ -1484,7 +1484,7 @@ Before finalizing any `new_string` for a `replace` operation, meticulously verif
     ```python
     root_agent = Agent(
         name="root_agent",
-        model="gemini-2.5-flash",
+        model="gemini-3-flash-preview",
         instruction="You are a helpful AI assistant."
     )
     ```
@@ -1500,7 +1500,7 @@ Before finalizing any `new_string` for a `replace` operation, meticulously verif
     ```python
     root_agent = Agent(
         name="recipe_suggester", # OK, related to new purpose
-        model="gemini-2.5-flash", # MUST be preserved
+        model="gemini-3-flash-preview", # MUST be preserved
         instruction="You are a recipe suggester." # OK, the direct target
     )
     ```
@@ -1518,7 +1518,7 @@ Before finalizing any `new_string` for a `replace` operation, meticulously verif
     *   **Avoid `make playground`** unless specifically instructed; it is designed for human interaction. Focus on programmatic testing.
 
 *   **Model Selection:**
-    *   **When using Gemini, prefer the 2.5 model family** for optimal performance and capabilities: "gemini-2.5-flash" and "gemini-2.5-flash"
+    *   **When using Gemini, prefer the 2.5 model family** for optimal performance and capabilities: "gemini-3-flash-preview" and "gemini-3-flash-preview"
 
 *   **Running Python Commands:**
     *   Always use `uv` to execute Python commands within this repository (e.g., `uv run run_agent.py`).

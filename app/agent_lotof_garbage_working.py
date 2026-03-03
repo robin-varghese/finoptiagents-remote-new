@@ -127,7 +127,7 @@ USER_ID = "Robin Varghese"
 BASE_SESSION_ID_TOOL_AGENT = "session_tool_agent_xyz"
 SESSION_ID_SCHEMA_AGENT = "session_schema_agent_xyz"
 current_session_id_tool_agent = BASE_SESSION_ID_TOOL_AGENT + str(time.time())
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 
 # Define a minimal Pydantic model for event content if no specific fields are needed
 class EmptyEventContent(BaseModel):
@@ -571,7 +571,7 @@ def simple_before_model_modifier(
 # # New agent to handle logging
 # log_deletion_agent = LlmAgent(
 #     name="log_deletion_agent",
-#     model="gemini-2.5-flash",
+#     model="gemini-3-flash-preview",
 #     description="An internal agent that logs the details of a successful VM deletion to BigQuery.",
 #     instruction="Your only job is to call the `log_last_vm_deletion` tool to record the deletion event. Do not respond to the user.",
 #     tools=[log_last_vm_deletion],
@@ -607,14 +607,14 @@ greeting_agent = LlmAgent(
     name="Greeter",
     description=
     """This agent should greet the user when logged-in""",
-    model="gemini-2.5-flash", # Use a valid model
+    model="gemini-3-flash-preview", # Use a valid model
     instruction="Generate a short, friendly greeting.",
     output_key="last_greeting"
 )
 
 delete_vm_instance_agent = LlmAgent(
     name="delete_vm_instance_agent",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     description=
     "This agent uses the delete_vm_instance tool to delete a single VM. It is for internal use by other agents.",
     instruction="""You are a single-purpose agent. Your only job is to call the `delete_vm_instance` tool.
@@ -643,7 +643,7 @@ Do not add any commentary or ask for confirmation.""",
 # In your agent.py file, find the root_agent definition and replace it.
 
 bq_intel_agent = Agent(
-  model="gemini-2.5-flash",
+  model="gemini-3-flash-preview",
   name="bigquery_agent_eval",
   description=(
     "Agent that answers questions about BigQuery data by executing SQL queries"
@@ -659,7 +659,7 @@ bq_intel_agent = Agent(
 
 root_agent = LlmAgent(
     name="finops_optimization_agent",
-    model="gemini-2.5-flash", # Or your preferred model
+    model="gemini-3-flash-preview", # Or your preferred model
     description=(
         """Agent for Google Cloud finops tasks. Can list, delete, and check CPU utilization of VMs. 
         It can also perform multi-step operations like deleting VMs based on their CPU usage."""

@@ -127,7 +127,7 @@ USER_ID = "Robin Varghese"
 BASE_SESSION_ID_TOOL_AGENT = "session_tool_agent_xyz"
 SESSION_ID_SCHEMA_AGENT = "session_schema_agent_xyz"
 current_session_id_tool_agent = BASE_SESSION_ID_TOOL_AGENT + str(time.time())
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 
 # Define a minimal Pydantic model for event content if no specific fields are needed
 class EmptyEventContent(BaseModel):
@@ -496,7 +496,7 @@ credentials_config = BigQueryCredentialsConfig(
 
 delete_vm_instance_agent = LlmAgent(
     name="delete_vm_instance_agent",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     description="A careful agent that verifies a VM exists and then calls a single tool to delete and log the action.",
     instruction="""You are a careful, two-step agent for deleting a VM.
     1.  **VERIFY:** Read the user's request to get the `project_id`, `zone`, and `instance_id`. Your first action MUST be to call `list_vm_instances` to confirm the VM exists.
@@ -516,7 +516,7 @@ greeting_agent = LlmAgent(
     name="Greeter",
     description=
     """This agent should greet the user when logged-in""",
-    model="gemini-2.5-flash", # Use a valid model
+    model="gemini-3-flash-preview", # Use a valid model
     instruction="Generate a short, friendly greeting.",
     output_key="last_greeting"
 )
@@ -527,7 +527,7 @@ greeting_agent = LlmAgent(
 
 root_agent = LlmAgent(
     name="finops_optimization_agent",
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     description=(
         "A comprehensive FinOps agent that can delete VMs and perform data analysis on deletion logs using its built-in BigQuery tool."
     ),

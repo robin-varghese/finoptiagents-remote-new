@@ -152,13 +152,13 @@ Removed specialists from root agent's sub-agents list. They are now ONLY childre
 
 | Agent | Model | Tools | Output Schema | Parent |
 |-------|-------|-------|---------------|--------|
-| budget_variance_agent | gemini-2.5-flash | run_bq_query | BudgetVarianceResult | finops_analytics_manager |
-| compliance_auditor_agent | gemini-2.5-flash | run_bq_query | ComplianceResult | finops_analytics_manager |
-| utilization_analyst_agent | gemini-2.5-flash | run_bq_query | UtilizationResult | finops_analytics_manager |
-| optimization_scout_agent | gemini-2.5-flash | run_bq_query | OptimizationResult | finops_analytics_manager |
-| environment_readiness_agent | gemini-2.5-flash | run_bq_query | ReadinessResult | finops_analytics_manager |
-| finops_analytics_manager | gemini-2.5-flash | None | FinOpsHealthReport | root_agent |
-| escalation_agent | gemini-2.5-flash | send_email | None | root_agent |
+| budget_variance_agent | gemini-3-flash-preview | run_bq_query | BudgetVarianceResult | finops_analytics_manager |
+| compliance_auditor_agent | gemini-3-flash-preview | run_bq_query | ComplianceResult | finops_analytics_manager |
+| utilization_analyst_agent | gemini-3-flash-preview | run_bq_query | UtilizationResult | finops_analytics_manager |
+| optimization_scout_agent | gemini-3-flash-preview | run_bq_query | OptimizationResult | finops_analytics_manager |
+| environment_readiness_agent | gemini-3-flash-preview | run_bq_query | ReadinessResult | finops_analytics_manager |
+| finops_analytics_manager | gemini-3-flash-preview | None | FinOpsHealthReport | root_agent |
+| escalation_agent | gemini-3-flash-preview | send_email | None | root_agent |
 
 ---
 
@@ -278,7 +278,7 @@ class VmDeletionAuditResult(BaseModel):
 
 #### 2. Agent Configuration
 
-- **Model:** gemini-2.5-flash
+- **Model:** gemini-3-flash-preview
 - **Tool:** `run_bq_query`
 - **Output Schema:** `VmDeletionAuditResult`
 - **Parent:** root_agent (direct sub-agent for compliance queries)
