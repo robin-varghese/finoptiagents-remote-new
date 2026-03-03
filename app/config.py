@@ -129,6 +129,9 @@ EARB_DESIGNDOCS = _fetch_config("rag-earb-designdocs")  # e.g., "gs://my-finops-
 # --- ADDED FOR BACKWARDS COMPATIBILITY ---
 LOCATION = GOOGLE_ZONE
 RAG_REGION = _fetch_config("rag-engine-location")
+BIGQUERY_DATASET_ID = _fetch_config("bigquery-dataset-id") or "finoptiagents"
+BIGQUERYAGENTANALYTICSPLUGIN_TABLE_ID = _fetch_config("bigquery-agent-analytics-table-id") or "agent_analytics_log"
+FINOPTIAGENTS_LLM = _fetch_config("finoptiagents-llm") or "gemini-3-flash-preview"
 
 logging.info("--- Configuration loading complete. ---")
 

@@ -3,7 +3,7 @@ Pydantic schemas for structured agent outputs.
 Ensures type-safe, reliable communication between agents in the granular architecture.
 """
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
 
@@ -22,7 +22,6 @@ class BudgetVarianceResult(BaseModel):
     severity: Literal["low", "medium", "high"] = Field(
         description="Overall severity assessment. low: <15% variance, medium: 15-25%, high: >25%"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class ComplianceResult(BaseModel):
@@ -39,7 +38,6 @@ class ComplianceResult(BaseModel):
     severity: Literal["low", "medium", "high", "critical"] = Field(
         description="Severity level. low: 1-2 projects, medium: 3-5, high: 6-10, critical: >10"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class UtilizationResult(BaseModel):
@@ -53,7 +51,6 @@ class UtilizationResult(BaseModel):
     total_potential_savings: float = Field(
         description="Estimated total monthly savings from addressing inefficiencies"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class OptimizationResult(BaseModel):
@@ -67,7 +64,6 @@ class OptimizationResult(BaseModel):
     estimated_monthly_savings: float = Field(
         description="Estimated monthly savings if all optimization candidates are addressed"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class ReadinessResult(BaseModel):
@@ -81,7 +77,6 @@ class ReadinessResult(BaseModel):
     total_zombie_cost: float = Field(
         description="Total monthly cost of zombie environments"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class FinOpsHealthReport(BaseModel):
@@ -109,7 +104,6 @@ class FinOpsHealthReport(BaseModel):
     critical_actions_required: list[str] = Field(
         description="Prioritized list of critical actions that need immediate attention"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class AgentErrorResponse(BaseModel):
@@ -127,7 +121,6 @@ class AgentErrorResponse(BaseModel):
         default=None,
         description="Any partial results that were obtained before the error"
     )
-    model_config = ConfigDict(extra='forbid')
 
 
 class VmDeletionAuditResult(BaseModel):
@@ -145,4 +138,3 @@ class VmDeletionAuditResult(BaseModel):
         default=None,
         description="Username filter if query was filtered by specific user"
     )
-    model_config = ConfigDict(extra='forbid')

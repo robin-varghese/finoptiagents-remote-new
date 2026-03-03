@@ -1,5 +1,6 @@
 import asyncio
 import streamlit as st
+import subprocess
 from google.adk.runners import Runner
 from google.adk.apps import App
 from google.adk.plugins.bigquery_agent_analytics_plugin import BigQueryAgentAnalyticsPlugin
@@ -21,6 +22,7 @@ warnings.filterwarnings("ignore", message="coroutine 'AsyncClient.aclose' was ne
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*AsyncClient.aclose.*")
 
 from app.utils.logging_config import setup_logging
+from app import config
 
 # Configure logging using centralized strategy
 setup_logging()
@@ -37,6 +39,23 @@ logger = logging.getLogger(__name__)
 logger.info("=" * 80)
 logger.info("🚀 FinOptiAgents Playground Starting...")
 logger.info("=" * 80)
+
+def get_gcloud_user():
+    """Fetches the currently logged-in gcloud user email."""
+    try:
+        result = subprocess.run(
+            ["gcloud", "config", "get-value", "account"],
+            capture_output=True, text=True, check=True
+        )
+        email = result.stdout.strip()
+        if email:
+            return email
+    except Exception as e:
+        logger.warning(f"Could not retrieve gcloud user: {e}")
+    return "streamlit-user" # Fallback
+
+CURRENT_USER = get_gcloud_user()
+logger.info(f"Session User ID set to: {CURRENT_USER}")
 
 # --- Custom CSS for Chat Bubbles ---
 st.markdown("""
@@ -124,6 +143,7 @@ from app.agent import finops_app, root_agent, greeting_agent
 # --- Sample Prompts ---
 sample_prompts = {
     "FinOps Analyst / Cloud Financial Manager": [
+        "List all 16+ Google Cloud Recommenders",
         "What Data Analysis & Reporting can you do",
         "Send me an email about the information (explanatory) about FinOptiagents Data Analysis & Reporting capabilities? My name=Robin Varghese, email=robinkv@gmail.com, subject=FinOptiagents Data Analysis & Reporting capabilities",
         "As part of the Budgeted & actual cost spent analysis, can you identify which are the good projects and which are the bad projects",
@@ -209,13 +229,13 @@ if "messages" not in st.session_state:
                 """Runs the greeting agent and captures its response."""
                 await greeting_session_service.create_session(
                     app_name="greeting_app",
-                    user_id="streamlit-user",
+                    user_id=CURRENT_USER,
                     session_id="greeting-session"
                 )
                 response_text = ""
                 initial_message = Content(role="user", parts=[Part(text="greet me")])
                 async for event in greeting_runner.run_async(
-                    user_id="streamlit-user",
+                    user_id=CURRENT_USER,
                     session_id="greeting-session",
                     new_message=initial_message,
                 ):
@@ -238,7 +258,7 @@ if "session_id" not in st.session_state:
     loop.run_until_complete(
          st.session_state.session_service.create_session(
             app_name="finoptiagents_app",
-            user_id="streamlit-user",
+            user_id=CURRENT_USER,
             session_id=st.session_state.session_id,
         )
     )
@@ -294,10 +314,10 @@ if prompt:
                 
                 # --- LOCAL SETUP FOR PLUGIN LIFECYCLE MANAGEMENT ---
                 analytics_plugin = BigQueryAgentAnalyticsPlugin(
-                    project_id="vector-search-poc",
-                    dataset_id="finoptiagents",
-                    table_id="agent_analytics_log",
-                    location="us-central1"
+                    project_id=config.GOOGLE_PROJECT_ID,
+                    dataset_id=config.BIGQUERY_DATASET_ID,
+                    table_id=config.BIGQUERYAGENTANALYTICSPLUGIN_TABLE_ID,
+                    location=config.GOOGLE_ZONE
                 )
                 
                 # Recreate app instance locally to attach our local plugin instance
@@ -320,7 +340,7 @@ if prompt:
                 
                 try:
                     async for event in local_runner.run_async(
-                        user_id="streamlit-user",
+                        user_id=CURRENT_USER,
                         session_id=st.session_state.session_id,
                         new_message=message_to_agent,
                     ):

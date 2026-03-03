@@ -9,7 +9,7 @@
 
 For Streamlit, tools are imported as regular Python functions, so logging happens through the standard application logger.
 
----
+-------
 
 ## 🚨 CRITICAL WARNING: NO CONSOLE LOGGING (MCP Server Mode)
 

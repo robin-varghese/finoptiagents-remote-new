@@ -926,14 +926,14 @@ def log_savings_impact(operation_id: str, savings_amount: float, currency: str, 
         return f"Failed to log savings: {e}"
 
 @mcp.tool()
-def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
+def scan_cost_recommendations(project_id: str, regions: Optional[List[str]] = None) -> str:
     """
     Scans for cost optimization recommendations across Compute Engine and Cloud SQL.
-    Parses 'primaryImpact' to calculate potential savings.
+    If regions are not specified, it will attempt to discover active regions, which can be slow.
     
     Args:
         project_id (str): GCP Project ID.
-        zone (str): GCP Zone (default "-" for all zones).
+        regions (Optional[List[str]]): A list of GCP regions to scan. If not provided, the tool will attempt to discover them.
         
     Returns:
         str: JSON summary of findings and total savings.
@@ -982,13 +982,15 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
     
     # --- 1. Identify Target Locations ---
     target_locations = set()
-    
-    # If a specific zone is provided (and valid), verify and us it
-    if zone and zone != "-" and zone != "ALL":
-         target_locations.add(zone)
-         if zone.count('-') >= 2:
-             target_locations.add(zone.rsplit('-', 1)[0])
+
+    if regions:
+        logging.info(f"   [Scan] Using provided regions: {regions}")
+        for r in regions:
+            target_locations.add(r)
+            if r.count('-') >= 2:
+                target_locations.add(r.rsplit('-', 1)[0])
     else:
+        logging.warning("   [Scan] No regions provided. Attempting to discover active regions. This may be slow.")
         # Discovery Mode
         default_zone = os.environ.get("GOOGLE_ZONE", "us-east4-a")
         target_locations.add(default_zone)
@@ -1000,7 +1002,7 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
             logging.info(f"   [Scan] Discovering active VM regions...")
             res = subprocess.run(
                 ["gcloud", "compute", "instances", "list", f"--project={project_id}", "--format=value(zone)"],
-                capture_output=True, text=True
+                capture_output=True, text=True, timeout=300
             )
             if res.returncode == 0:
                 for z in res.stdout.splitlines():
@@ -1018,7 +1020,7 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
             logging.info(f"   [Scan] Discovering active Address regions...")
             res = subprocess.run(
                 ["gcloud", "compute", "addresses", "list", f"--project={project_id}", "--format=value(region)"],
-                capture_output=True, text=True
+                capture_output=True, text=True, timeout=300
             )
             if res.returncode == 0:
                 for r in res.stdout.splitlines():
@@ -1043,8 +1045,6 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
         "google.compute.disk.IdleResourceRecommender",
         "google.cloudbilling.commitment.SpendBasedCommitmentRecommender",
         "google.resourcemanager.projectUtilization.Recommender",
-        # IPs can be global or regional, but scanning global often covers most external IPs
-        "google.compute.address.IdleResourceRecommender" 
     }
     
     # Recommenders that strictly require Region (e.g. us-central1)
@@ -1064,6 +1064,11 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
         "google.container.DiagnosisRecommender" # Often cluster-location specific
     }
 
+    # Recommenders that can be Global OR Regional (but NOT Zonal)
+    GLOBAL_OR_REGIONAL_RECOMMENDERS = {
+        "google.compute.address.IdleResourceRecommender"
+    }
+
     for recommender in RECOMMENDERS:
         for location in target_locations:
             is_zone = len(location.split('-')) > 2
@@ -1077,10 +1082,14 @@ def scan_cost_recommendations(project_id: str, zone: str = "-") -> str:
                 continue
             if recommender in ZONAL_RECOMMENDERS and not is_zone:
                 continue
+            if recommender in GLOBAL_OR_REGIONAL_RECOMMENDERS and is_zone:
+                continue
             
             # Special Case: Address Recommender can technically key off regions too, 
             # but usually global catch-all is sufficient for standard static IPs. 
             # If explicit region scan is needed, logic can be adjusted.
+            
+            logging.info(f"   [Scan] Checking {recommender} in {location}...")
             
             cmd = [
                 "gcloud", "recommender", "recommendations", "list",
