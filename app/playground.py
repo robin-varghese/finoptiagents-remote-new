@@ -217,6 +217,122 @@ with st.sidebar:
                     st.session_state.prompt_from_sidebar = prompt_text
                     st.session_state.clicked_prompts.add(prompt_text)
 
+def render_assistant_content(content):
+    """
+    Centralized rendering for assistant messages.
+    Supports Plotly figures, structured JSON, and Markdown.
+    """
+    if isinstance(content, go.Figure):
+        st.plotly_chart(content)
+        return True
+
+    if not isinstance(content, str):
+        st.markdown(str(content))
+        return False
+
+    is_rendered = False
+    try:
+        # Try to parse as JSON
+        if content.strip().startswith('{') or content.strip().startswith('['):
+            # Find the first { and last } to handle cases with surrounding text
+            start = content.find('{')
+            end = content.rfind('}')
+            if start != -1 and end != -1:
+                json_str = content[start:end+1]
+                parsed_json = json.loads(json_str)
+                
+                if start > 0:
+                    st.markdown(content[:start].strip())
+
+                if isinstance(parsed_json, dict):
+                    # 1. Plotly Chart
+                    if "data" in parsed_json and "layout" in parsed_json:
+                        st.plotly_chart(go.Figure(parsed_json))
+                        is_rendered = True
+                    
+                    # 2. Budget Variance
+                    elif "projects_at_risk" in parsed_json:
+                        st.subheader("📊 Budget Variance Analysis")
+                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()} | **Total Analyzed:** {parsed_json.get('total_projects_analyzed', 'N/A')}")
+                        import pandas as pd
+                        st.table(pd.DataFrame(parsed_json["projects_at_risk"]))
+                        is_rendered = True
+                    
+                    # 3. Compliance Audit
+                    elif "non_compliant_projects" in parsed_json:
+                        st.subheader("🛡️ Compliance Audit")
+                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()}")
+                        st.error(f"Found {len(parsed_json['non_compliant_projects'])} non-compliant projects.")
+                        st.write("**Issues identified:**")
+                        for action in parsed_json.get("recommended_actions", []):
+                            st.info(action)
+                        is_rendered = True
+
+                    # 4. Utilization Insights
+                    elif "anomalous_environments" in parsed_json or "low_utilization_resources" in parsed_json:
+                        st.subheader("📈 Utilization Insights")
+                        if parsed_json.get("anomalous_environments"):
+                            st.write("**Anomalous Environments (Lower > Prod Cost):**")
+                            st.table(parsed_json["anomalous_environments"])
+                        if parsed_json.get("low_utilization_resources"):
+                            st.write("**Low Utilization Resources (<50%):**")
+                            st.table(parsed_json["low_utilization_resources"])
+                        st.success(f"Estimated Potential Savings: ${parsed_json.get('total_potential_savings', 0):,.2f}")
+                        is_rendered = True
+
+                    # 5. Optimization Summary
+                    elif "top_cost_contributors" in parsed_json:
+                        st.subheader("⚡ Optimization Opportunities")
+                        st.write("**Top Cost Contributors:**")
+                        st.table(parsed_json["top_cost_contributors"])
+                        if parsed_json.get("optimization_candidates"):
+                            st.warning("**Candidates for Optimization:**")
+                            for cand in parsed_json["optimization_candidates"]:
+                                st.write(f"- {cand}")
+                        st.success(f"Estimated Monthly Savings: ${parsed_json.get('estimated_monthly_savings', 0):,.2f}")
+                        is_rendered = True
+
+                    # 6. Environment Readiness
+                    elif "zombie_environments" in parsed_json:
+                        st.subheader("🧟 Environment Readiness Audit")
+                        if parsed_json.get("zombie_environments"):
+                            st.error(f"Identified {len(parsed_json['zombie_environments'])} Zombie Environments")
+                            st.table(parsed_json["zombie_environments"])
+                        if parsed_json.get("justified_environments"):
+                            st.success(f"Justified Environments: {', '.join(parsed_json['justified_environments'])}")
+                        st.write(f"**Total Zombie Cost:** ${parsed_json.get('total_zombie_cost', 0):,.2f}")
+                        is_rendered = True
+
+                    # 7. VM Deletion Audit
+                    elif "deleted_vms" in parsed_json:
+                        st.subheader("🧹 VM Deletion Audit")
+                        st.info(f"Summary for timeframe: {parsed_json.get('query_timeframe', 'N/A')}")
+                        st.table(parsed_json["deleted_vms"])
+                        st.write(f"**Total Deletions Found:** {parsed_json.get('total_deletions', 0)}")
+                        is_rendered = True
+
+                    # 8. Full Health Report (Manager)
+                    elif "budget_summary" in parsed_json:
+                        st.subheader("🏥 FinOps Health Report")
+                        st.metric("Overall Health Score", f"{parsed_json.get('overall_health_score', 0)}/100")
+                        cols = st.columns(2)
+                        with cols[0]:
+                            st.write("**Critical Actions:**")
+                            for action in parsed_json.get("critical_actions_required", []):
+                                st.write(f"- 🔴 {action}")
+                        # Could add more nested summary here but keeping it concise
+                        is_rendered = True
+
+                if is_rendered and end < len(content) - 1:
+                    st.markdown(content[end+1:].strip())
+
+    except Exception:
+        pass
+
+    if not is_rendered:
+        st.markdown(content)
+    return is_rendered
+
 # --- Session Management & Automatic Greeting ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -272,8 +388,8 @@ if "session_id" not in st.session_state:
 # --- Chat History Display ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        if isinstance(message["content"], go.Figure):
-            st.plotly_chart(message["content"])
+        if message["role"] == "assistant":
+            render_assistant_content(message["content"])
         else:
             st.markdown(str(message["content"]))
 
@@ -398,82 +514,9 @@ if prompt:
             thinking_placeholder.empty()
             
             # --- START: FINAL, CORRECTED RENDERING LOGIC ---
+            render_assistant_content(final_response)
             final_content_to_store = final_response
-            is_chart_rendered = False
-            
-            try:
-                # 1. First, try to load the entire response as JSON.
-                parsed_json = json.loads(final_response)
-                
-                # --- NEW: Enhanced Rendering for FinOps Schemas ---
-                if isinstance(parsed_json, dict):
-                    # Check for Chart JSON (Plotly)
-                    if "data" in parsed_json and "layout" in parsed_json:
-                        fig = go.Figure(parsed_json)
-                        st.plotly_chart(fig)
-                        final_content_to_store = fig
-                        is_chart_rendered = True
-                    
-                    # Check for Budget Variance results
-                    elif "projects_at_risk" in parsed_json:
-                        st.subheader("📊 Budget Variance Analysis")
-                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()} | **Total Analyzed:** {parsed_json.get('total_projects_analyzed', 'N/A')}")
-                        import pandas as pd
-                        df = pd.DataFrame(parsed_json["projects_at_risk"])
-                        st.table(df)
-                        is_chart_rendered = True
-                    
-                    # Check for Compliance results
-                    elif "non_compliant_projects" in parsed_json:
-                        st.subheader("🛡️ Compliance Audit")
-                        st.write(f"**Severity:** {parsed_json.get('severity', 'N/A').upper()}")
-                        st.error(f"Found {len(parsed_json['non_compliant_projects'])} non-compliant projects.")
-                        st.write("**Issues identified:**")
-                        for action in parsed_json.get("recommended_actions", []):
-                            st.info(action)
-                        is_chart_rendered = True
-
-                    # Check for Utilization results
-                    elif "anomalous_environments" in parsed_json or "low_utilization_resources" in parsed_json:
-                        st.subheader("📈 Utilization Insights")
-                        if "anomalous_environments" in parsed_json and parsed_json["anomalous_environments"]:
-                            st.write("**Anomalous Environments (Lower > Prod Cost):**")
-                            st.table(parsed_json["anomalous_environments"])
-                        if "low_utilization_resources" in parsed_json and parsed_json["low_utilization_resources"]:
-                            st.write("**Low Utilization Resources (<50%):**")
-                            st.table(parsed_json["low_utilization_resources"])
-                        st.success(f"Estimated Potential Savings: ${parsed_json.get('total_potential_savings', 0):,.2f}")
-                        is_chart_rendered = True
-                
-            except json.JSONDecodeError:
-                # Fallback to searching for a JSON block within the text.
-                json_match = re.search(r'\{.*\}', final_response, re.DOTALL)
-                if json_match:
-                    chart_json_str = json_match.group(0)
-                    try:
-                        parsed_json = json.loads(chart_json_str)
-                        if isinstance(parsed_json, dict) and "data" in parsed_json and "layout" in parsed_json:
-                            intro_text = final_response[:json_match.start()].strip()
-                            if intro_text:
-                                st.markdown(intro_text)
-                            
-                            fig = go.Figure(parsed_json)
-                            st.plotly_chart(fig)
-                            final_content_to_store = fig
-                            is_chart_rendered = True
-                        elif isinstance(parsed_json, dict) and "projects_at_risk" in parsed_json:
-                            intro_text = final_response[:json_match.start()].strip()
-                            if intro_text: st.markdown(intro_text)
-                            st.table(parsed_json["projects_at_risk"])
-                            is_chart_rendered = True
-                    except json.JSONDecodeError:
-                        pass
-
-
-            if not is_chart_rendered:
-                st.markdown(final_response)
-            
-            logging.info("Final response rendered to UI.")
+            logging.info("Final response rendered to UI (using global renderer).")
             # --- END: FINAL, CORRECTED RENDERING LOGIC ---
 
         # This `except` block corresponds to the main `try` at the top
