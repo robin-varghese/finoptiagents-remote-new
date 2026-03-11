@@ -207,6 +207,15 @@ log_savings_impact_agent = LlmAgent(
     tools=[log_savings_impact],
 )
 
+# --- Visualization Agent (NEW) ---
+visualization_agent = LlmAgent(
+    name="visualization_agent",
+    model=config.FINOPTIAGENTS_LLM,
+    description=descandinstructions.visualization_agent_description,
+    instruction=descandinstructions.visualization_agent_instruction,
+    tools=[run_bq_query, generate_chart_from_data],
+)
+
 # =============================================================================
 # Existing Agents (Retained from previous architecture)
 # =============================================================================
@@ -261,7 +270,7 @@ ROOT_TOOLS = [
     run_bq_query,
     send_email,
     list_vm_instances,
-    generate_chart_from_data,
+    # generate_chart_from_data, # REMOVED: Delegated to visualization_agent
     call_cpu_utilization_agent,
     # rag_query, # Root delegates RAG to rag_agent
     # create_corpus,
@@ -319,6 +328,7 @@ try:
             monitoring_agent,
             gcloud_recommender_agent, # Added the new agent
             bq_auditor_agent, # Added the new agent
+            visualization_agent, # Added the new agent
         ],
         before_model_callback=simple_before_model_modifier,
     )
